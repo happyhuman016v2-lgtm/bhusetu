@@ -24,6 +24,7 @@ export const App: React.FC = () => {
   });
 
   const [selectedParcelId, setSelectedParcelId] = useState<string>('parcel-1');
+  const [selectionEpoch, setSelectionEpoch] = useState<number>(Date.now());
   const [activeRole, setActiveRole] = useState<Role>('citizen');
   const [activePartition, setActivePartition] = useState<PartitionResult | undefined>();
   const [pendingPartitions, setPendingPartitions] = useState<PartitionResult[]>([]);
@@ -60,6 +61,7 @@ export const App: React.FC = () => {
 
   const handleSelectParcel = (id: string) => {
     setSelectedParcelId(id);
+    setSelectionEpoch(Date.now());
     // Reset partition if switching to a parcel with different boundaries
     if (activePartition && activePartition.parcelId !== id) {
       setActivePartition(undefined);
@@ -147,6 +149,7 @@ export const App: React.FC = () => {
           <MapEngine
             parcels={parcels}
             selectedParcelId={selectedParcelId}
+            selectionEpoch={selectionEpoch}
             onSelectParcel={handleSelectParcel}
             activePartition={activePartition}
             isMapExpanded={isMapExpanded}

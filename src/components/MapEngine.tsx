@@ -15,6 +15,7 @@ import {
 interface Props {
   parcels: Parcel[];
   selectedParcelId: string;
+  selectionEpoch?: number;
   onSelectParcel: (parcelId: string) => void;
   activePartition?: PartitionResult;
   isMapExpanded?: boolean;
@@ -176,6 +177,7 @@ const buildPartitionFeatures = (
 export const MapEngine: React.FC<Props> = ({
   parcels,
   selectedParcelId,
+  selectionEpoch,
   onSelectParcel,
   activePartition,
   isMapExpanded,
@@ -216,29 +218,22 @@ export const MapEngine: React.FC<Props> = ({
 
   const fitToParcel = useCallback((map: maplibregl.Map, parcel: Parcel) => {
     try {
-      if (!parcel || !parcel.geometry) return;
+      if (!map || !parcel || !parcel.geometry) return;
       const geom = (parcel.geometry as any)?.geometry || parcel.geometry;
       const bbox = turf.bbox(geom);
       
-      const doFit = () => {
-        map.fitBounds(
-          [
-            [bbox[0], bbox[1]],
-            [bbox[2], bbox[3]],
-          ],
-          {
-            padding: 80,
-            duration: 900,
-            maxZoom: 17.5,
-          }
-        );
-      };
-
-      if (map.loaded()) {
-        doFit();
-      } else {
-        map.once('load', doFit);
-      }
+      map.fitBounds(
+        [
+          [bbox[0], bbox[1]],
+          [bbox[2], bbox[3]],
+        ],
+        {
+          padding: 80,
+          duration: 900,
+          maxZoom: 17.5,
+          essential: true,
+        }
+      );
     } catch (e) {
       console.warn('fitBounds error:', e);
     }
@@ -500,7 +495,7 @@ export const MapEngine: React.FC<Props> = ({
     }
   }, [updateMapData, parcels, selectedParcelId, activePartition, showBoundaries, showBuffers]);
 
-  // Automatically fly to selected parcel whenever selectedParcelId changes
+  // Automatically fly to selected parcel whenever selectedParcelId or selectionEpoch changes
   useEffect(() => {
     if (!selectedParcelId) return;
 
@@ -513,7 +508,7 @@ export const MapEngine: React.FC<Props> = ({
     if (mapRightRef.current) {
       fitToParcel(mapRightRef.current, targetParcel);
     }
-  }, [selectedParcelId, parcels, fitToParcel]);
+  }, [selectedParcelId, selectionEpoch, parcels, fitToParcel]);
 
   // Satellite Opacity Slider on Left Map (when NOT in Split View)
   useEffect(() => {
