@@ -72,5 +72,63 @@
       "status": "ORDER_ACTIVE_DISPATCHED",
       "action_mandate": "Direct Survey of India UAV Pilot Unit to conduct high-density sub-3cm drone flight over disputed boundary polygon."
     }
+  },
+  {
+    "index": 3,
+    "timestamp": "2026-10-08T22:24:09.008624+00:00",
+    "order_id": "867c5fb0-751b-46bf-88e0-4ae2cfd4bbf8",
+    "parcel_id": "svamitva-01",
+    "ulpin": "UP1428SNMPGN101",
+    "officer_badge_id": "PAT-LKO-014",
+    "prev_hash": "1c36e022c358bacb750903f655614318a8e154100cb807df57b4c703cba15e07",
+    "hash": "ab0ad4e474b3c66fe85b857c36ed7da435a21a6cd7faa1df0d4d18d172138f71",
+    "payload": {
+      "index": 3,
+      "order_id": "867c5fb0-751b-46bf-88e0-4ae2cfd4bbf8",
+      "timestamp": "2026-10-08T22:24:09.008624+00:00",
+      "type": "DRONE_RESURVEY_STATUTORY_ORDER",
+      "parcel_id": "svamitva-01",
+      "ulpin": "UP1428SNMPGN101",
+      "officer_badge_id": "PAT-LKO-014",
+      "officer_name": "Rameshwar Nath Shukla",
+      "discrepancy_reason": "Ground dispute detected; redemarcation ordered under Sec 24.",
+      "target_accuracy": "< 3cm GSD UAV Photogrammetry",
+      "statutory_clause": "Uttar Pradesh Revenue Code 2006 (Sec 67-A) / SVAMITVA Directive",
+      "coordinates_centroid": [
+        80.943,
+        26.986
+      ],
+      "status": "ORDER_ACTIVE_DISPATCHED",
+      "action_mandate": "Direct Survey of India UAV Pilot Unit to conduct high-density sub-3cm drone flight over disputed boundary polygon."
+    }
+  },
+  {
+    "index": 4,
+    "timestamp": "2026-10-08T22:24:26.089157+00:00",
+    "order_id": "f7f8679d-04c4-4921-bd4e-009d7882fcd2",
+    "parcel_id": "svamitva-01",
+    "ulpin": "UP1428SNMPGN101",
+    "officer_badge_id": "PAT-LKO-014",
+    "prev_hash": "ab0ad4e474b3c66fe85b857c36ed7da435a21a6cd7faa1df0d4d18d172138f71",
+    "hash": "7728d80d4a51f9a83b5a123f425fc7c13aba3431d271637f779f81285fb79b7d",
+    "payload": {
+      "index": 4,
+      "order_id": "f7f8679d-04c4-4921-bd4e-009d7882fcd2",
+      "timestamp": "2026-10-08T22:24:26.089157+00:00",
+      "type": "DRONE_RESURVEY_STATUTORY_ORDER",
+      "parcel_id": "svamitva-01",
+      "ulpin": "UP1428SNMPGN101",
+      "officer_badge_id": "PAT-LKO-014",
+      "officer_name": "Rameshwar Nath Shukla",
+      "discrepancy_reason": "Ground dispute detected; redemarcation ordered under Sec 24.",
+      "target_accuracy": "< 3cm GSD UAV Photogrammetry",
+      "statutory_clause": "Uttar Pradesh Revenue Code 2006 (Sec 67-A) / SVAMITVA Directive",
+      "coordinates_centroid": [
+        80.943,
+        26.986
+      ],
+      "status": "ORDER_ACTIVE_DISPATCHED",
+      "action_mandate": "Direct Survey of India UAV Pilot Unit to conduct high-density sub-3cm drone flight over disputed boundary polygon."
+    }
   }
 ]

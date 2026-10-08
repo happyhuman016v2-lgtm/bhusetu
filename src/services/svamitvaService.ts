@@ -129,3 +129,91 @@ export async function deriveVillageRoRs(parcelIds?: string[]): Promise<any | nul
   }
 }
 
+export interface SurveySourceMetadata {
+  state: 'CONFIGURED_WFS' | 'UPLOADED_FILE' | 'SYNTHETIC_DEMO' | 'NO_SOURCE';
+  source_type: string;
+  dataset_id: string;
+  original_filename: string;
+  source_crs: string;
+  survey_date: string;
+  supplier: string;
+  accuracy_metadata: string;
+  geometry_version: string;
+  sha256_checksum?: string | null;
+  total_features: number;
+  imported_at: string;
+  disclaimer: string;
+}
+
+export interface SurveyUploadResponse {
+  status: string;
+  imported_count: number;
+  rejected_count: number;
+  rejected_features: Array<{ feature_index: number; reason: string }>;
+  conflicting_ids: string[];
+  metadata: SurveySourceMetadata;
+  dataset_id: string;
+  sha256_checksum: string;
+}
+
+export async function fetchSurveySourceState(): Promise<{
+  state: string;
+  total_parcels: number;
+  metadata: SurveySourceMetadata;
+}> {
+  const res = await fetch(`${API_BASE}/survey/source-state`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
+}
+
+export async function uploadSurveyGeoJSON(
+  file: File,
+  supplier?: string,
+  surveyDate?: string,
+  accuracy?: string
+): Promise<SurveyUploadResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (supplier) formData.append('supplier', supplier);
+  if (surveyDate) formData.append('survey_date', surveyDate);
+  if (accuracy) formData.append('accuracy_metadata', accuracy);
+
+  const res = await fetch(`${API_BASE}/survey/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({ detail: 'Upload error' }));
+    throw new Error(errData.detail || `HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function testWFSConnection(
+  wfsUrl: string,
+  layerName?: string
+): Promise<any> {
+  const res = await fetch(`${API_BASE}/survey/wfs-test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ wfs_url: wfsUrl, layer_name: layerName }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'WFS test error' }));
+    throw new Error(err.detail || `HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function loadDemoSurvey(): Promise<any> {
+  const res = await fetch(`${API_BASE}/survey/load-demo`, { method: 'POST' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
+}
+
+export async function clearSurveySource(): Promise<any> {
+  const res = await fetch(`${API_BASE}/survey/clear`, { method: 'POST' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
+}
+

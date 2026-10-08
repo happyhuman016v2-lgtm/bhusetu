@@ -1,0 +1,15 @@
+{
+  "state": "SYNTHETIC_DEMO",
+  "source_type": "Synthetic Voronoi Demonstration Dataset",
+  "dataset_id": "ds-demo-village-2026",
+  "original_filename": "drone_parcels_raw.geojson",
+  "source_crs": "EPSG:4326",
+  "survey_date": "2026-03-15",
+  "supplier": "BhuSetu Cadastral Synthesizer (Demo Mode)",
+  "accuracy_metadata": "Demonstration Math (400m x 400m Abadi Layout)",
+  "geometry_version": "v1.0",
+  "sha256_checksum": null,
+  "total_features": 73,
+  "imported_at": "2026-10-08T22:24:47.909004+00:00",
+  "disclaimer": "SYNTHETIC DEMONSTRATION DATASET - NOT OFFICIAL SVAMITVA RECORD. FOR DEMO AND INTEGRATION BENCHMARKING ONLY."
+}

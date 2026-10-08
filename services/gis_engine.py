@@ -106,6 +106,74 @@ def generate_parcel_buffer(
     }
 
 
+def calculate_metric_area_sqm(geom_input: Any, source_epsg: int = 4326) -> float:
+    """Calculates accurate metric area in square meters using local UTM projection."""
+    if isinstance(geom_input, dict):
+        s_geom = shape(geom_input)
+    else:
+        s_geom = geom_input
+    s_geom = clean_geometry(s_geom)
+    if s_geom is None or s_geom.is_empty:
+        return 0.0
+    centroid = s_geom.centroid
+    utm_epsg = get_utm_epsg(centroid.x, centroid.y)
+    geom_utm = reproject_geom(s_geom, source_epsg, utm_epsg)
+    geom_utm = clean_geometry(geom_utm)
+    return round(float(geom_utm.area), 2)
+
+
+def calculate_area_discrepancy(
+    survey_area_sqm: float,
+    registered_area_sqm: Optional[float]
+) -> Dict[str, Any]:
+    """
+    Computes verified area discrepancy between surveyed metric ground-truth and legal registered title:
+    Formula: absolute discrepancy percentage = abs(survey_area - registered_area) / registered_area * 100
+    Signed area change is kept separate from absolute discrepancy.
+    Missing or zero registered area produces a verification state (no numeric percentage).
+    Strict >5% policy:
+    - 390 m² registered vs 412 m² surveyed: ~5.6410256% (EXCEEDS_TOLERANCE)
+    - 400 m² registered vs 420 m² surveyed: exactly 5.0% (TOLERANCE_ACCEPTABLE)
+    """
+    if registered_area_sqm is None or registered_area_sqm <= 0:
+        return {
+            "survey_area_sqm": round(survey_area_sqm, 2),
+            "registered_area_sqm": None,
+            "absolute_discrepancy_pct": None,
+            "signed_area_change_sqm": None,
+            "signed_area_change_pct": None,
+            "status": "REGISTERED_AREA_UNAVAILABLE",
+            "exceeds_threshold": False,
+            "requires_review": True,
+            "message": "Registered legal area is missing, unrecorded, or zero. Field verification required."
+        }
+
+    signed_change_sqm = survey_area_sqm - registered_area_sqm
+    signed_change_pct = (signed_change_sqm / registered_area_sqm) * 100.0
+    abs_discrepancy_pct = (abs(signed_change_sqm) / registered_area_sqm) * 100.0
+
+    # Strict > 5% policy
+    exceeds = abs_discrepancy_pct > 5.0
+    status = "DISCREPANCY_EXCEEDS_TOLERANCE" if exceeds else "TOLERANCE_ACCEPTABLE"
+
+    return {
+        "survey_area_sqm": round(survey_area_sqm, 2),
+        "registered_area_sqm": round(registered_area_sqm, 2),
+        "absolute_discrepancy_pct": round(abs_discrepancy_pct, 7),
+        "signed_area_change_sqm": round(signed_change_sqm, 2),
+        "signed_area_change_pct": round(signed_change_pct, 7),
+        "status": status,
+        "exceeds_threshold": exceeds,
+        "requires_review": exceeds,
+        "tolerance_threshold_pct": 5.0,
+        "message": (
+            f"Surveyed area deviates by {round(abs_discrepancy_pct, 2)}% from registered deed (Threshold: 5.0%). Officer review flagged."
+            if exceeds else
+            f"Surveyed area within standard ±5.0% cadastre tolerance ({round(abs_discrepancy_pct, 2)}%)."
+        )
+    }
+
+
 def analyze_encroachments(
     features: List[Dict[str, Any]],
     buffer_meters: float = 3.0,
@@ -114,11 +182,9 @@ def analyze_encroachments(
     """
     Perform spatial intersection and conflict detection between:
     - Private residential parcel buffers and Public Road / Corridors
-    - Adjacent private parcel boundary overlaps (dispute zones)
-
-    Returns:
-    - GeoJSON FeatureCollection of conflict polygons
-    - Dispute metadata (severity, overlap area in sq.m, statutory clause)
+    - Distinguishes positive-area overlap from zero-area boundary touch
+    - Displays 'Potential corridor overlap requiring review', never automatic legal eviction verdict.
+    - Discloses source uncertainty.
     """
     conflict_features = []
     road_geom = None
@@ -132,20 +198,17 @@ def analyze_encroachments(
             road_geom = shape(f["geometry"])
             break
 
-    # If no designated road feature found, look for any public road
     if road_geom is None:
         for f in features:
             if "road" in f.get("properties", {}).get("land_type", "").lower():
                 road_geom = shape(f["geometry"])
                 break
 
-    # Extract private residential parcels
     private_parcels = [
         f for f in features
         if f.get("properties", {}).get("land_type") not in ("Public Road",)
     ]
 
-    # UTM reproject for exact area math
     if features and features[0].get("geometry"):
         sample_c = shape(features[0]["geometry"]).centroid
         utm_epsg = get_utm_epsg(sample_c.x, sample_c.y)
@@ -153,8 +216,6 @@ def analyze_encroachments(
         utm_epsg = 32644
 
     road_geom_utm = reproject_geom(clean_geometry(road_geom), 4326, utm_epsg) if road_geom else None
-
-    # 1. Encroachment onto Public Road Right-of-Way
     total_encroachment_sqm = 0.0
 
     for p in private_parcels:
@@ -164,31 +225,34 @@ def analyze_encroachments(
             continue
 
         p_geom_utm = reproject_geom(p_geom_clean, 4326, utm_epsg)
-
-        # Buffer the private parcel outward to simulate boundary expansion/setback violation
         p_buffered_utm = p_geom_utm.buffer(buffer_meters, resolution=16)
 
-        # Conflict A: Direct intersection between private parcel buffer and public road
         if road_geom_utm and p_buffered_utm.intersects(road_geom_utm):
             intersection_utm = p_buffered_utm.intersection(road_geom_utm)
             intersection_utm = clean_geometry(intersection_utm)
 
-            if intersection_utm and not intersection_utm.is_empty and intersection_utm.area > 2.0:
-                overlap_sqm = round(intersection_utm.area, 1)
-                total_encroachment_sqm += overlap_sqm
+            if intersection_utm and not intersection_utm.is_empty:
+                overlap_sqm = round(intersection_utm.area, 2)
 
-                # Determine dispute severity
-                if overlap_sqm > 25.0:
-                    severity = "CRITICAL"
-                    clause = "U.P. Revenue Code 2006 Sec 67 (Public Road Encroachment Notice)"
-                elif overlap_sqm > 10.0:
-                    severity = "WARNING"
-                    clause = "SVAMITVA Scheme Guidelines Annexure IV (Right-of-Way Buffer Setback Infringement)"
-                else:
+                # Separate zero-area boundary contact from positive-area overlap
+                if overlap_sqm <= 0.05 or intersection_utm.geom_type in ('LineString', 'MultiLineString', 'Point'):
+                    conflict_type = "BOUNDARY_CONTACT_ZERO_OVERLAP"
                     severity = "INFO"
-                    clause = "Abadi Boundary Reconciliation Pending"
+                    review_label = "Abadi parcel boundary touches road reserve; zero positive area overlap."
+                else:
+                    conflict_type = "POTENTIAL_CORRIDOR_OVERLAP_REQUIRING_REVIEW"
+                    total_encroachment_sqm += overlap_sqm
 
-                # Reproject conflict polygon back to WGS84
+                    if overlap_sqm > 25.0:
+                        severity = "CRITICAL"
+                        review_label = f"Substantial buffer intrusion ({overlap_sqm} m²) into public corridor; physical site verification required."
+                    elif overlap_sqm > 10.0:
+                        severity = "WARNING"
+                        review_label = f"Moderate buffer setback overlap ({overlap_sqm} m²); requires officer alignment review."
+                    else:
+                        severity = "INFO"
+                        review_label = f"Minor buffer overlap ({overlap_sqm} m²) within typical UAV GPS tolerance envelope."
+
                 conflict_wgs84 = reproject_geom(intersection_utm, utm_epsg, 4326)
 
                 conflict_features.append({
@@ -196,21 +260,21 @@ def analyze_encroachments(
                     "id": f"conflict-road-{p.get('id')}",
                     "geometry": mapping(conflict_wgs84),
                     "properties": {
-                        "conflict_type": "PUBLIC_ROAD_RIGHT_OF_WAY_ENCROACHMENT",
+                        "conflict_type": conflict_type,
                         "dispute_severity": severity,
                         "overlap_area_sqm": overlap_sqm,
-                        "encroaching_parcel_id": p.get("properties", {}).get("property_id"),
-                        "survey_plot_no": p.get("properties", {}).get("survey_plot_no"),
-                        "owner_name": p.get("properties", {}).get("owner_name"),
-                        "gharouni_card_no": p.get("properties", {}).get("gharouni_card_no"),
-                        "affected_asset": "Public Village Road / Gali Corridor",
+                        "is_positive_area_overlap": overlap_sqm > 0.05,
+                        "encroaching_parcel_id": p.get("properties", {}).get("property_id") or p.get("id"),
+                        "survey_plot_no": p.get("properties", {}).get("survey_plot_no", "Unknown"),
+                        "owner_name": p.get("properties", {}).get("owner_name", "Unknown"),
+                        "affected_corridor": "Public Village Road Reserve",
                         "buffer_distance_tested_m": buffer_meters,
-                        "statutory_clause": clause,
-                        "dispute_risk_score": min(98, int(overlap_sqm * 2.2 + 20))
+                        "source_uncertainty": "±5cm UAV Photogrammetry Ground Sampling Distance",
+                        "review_verdict": review_label,
+                        "legal_status": "Potential overlap requiring review (No automatic eviction judgment)"
                     }
                 })
 
-    # Sort conflicts by severity and overlap area descending
     severity_order = {"CRITICAL": 0, "WARNING": 1, "INFO": 2}
     conflict_features.sort(key=lambda x: (severity_order.get(x["properties"]["dispute_severity"], 3), -x["properties"]["overlap_area_sqm"]))
 
@@ -220,9 +284,10 @@ def analyze_encroachments(
         "features": conflict_features,
         "metadata": {
             "total_conflicts_detected": len(conflict_features),
-            "total_encroachment_sqm": round(total_encroachment_sqm, 1),
+            "positive_overlap_count": sum(1 for c in conflict_features if c["properties"]["is_positive_area_overlap"]),
+            "zero_area_touch_count": sum(1 for c in conflict_features if not c["properties"]["is_positive_area_overlap"]),
+            "total_encroachment_sqm": round(total_encroachment_sqm, 2),
             "tested_buffer_meters": buffer_meters,
-            "critical_disputes_count": sum(1 for c in conflict_features if c["properties"]["dispute_severity"] == "CRITICAL"),
-            "warning_disputes_count": sum(1 for c in conflict_features if c["properties"]["dispute_severity"] == "WARNING")
+            "disclaimer": "Analysis indicates spatial overlap against road reserve. Does not constitute a judicial eviction finding."
         }
     }

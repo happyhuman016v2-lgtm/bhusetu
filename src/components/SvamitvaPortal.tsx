@@ -9,6 +9,13 @@ import {
 import {
   fetchRoRDossier,
   fetchPropertyCard,
+  fetchSurveySourceState,
+  uploadSurveyGeoJSON,
+  testWFSConnection,
+  loadDemoSurvey,
+  clearSurveySource,
+  SurveySourceMetadata,
+  SurveyUploadResponse,
 } from '../services/svamitvaService';
 import { RoRDossierModal } from './RoRDossierModal';
 import {
@@ -31,6 +38,15 @@ import {
   Maximize2,
   Landmark,
   ChevronRight,
+  Upload,
+  Database,
+  Globe,
+  RefreshCw,
+  AlertCircle,
+  FileCheck,
+  Trash2,
+  Lock,
+  Layers,
 } from 'lucide-react';
 
 interface Props {
@@ -42,6 +58,7 @@ interface Props {
   encroachmentResults: EncroachmentAnalysisResult | null;
   isAnalyzing: boolean;
   onRunAnalysis: () => void;
+  onParcelsUpdated?: () => void;
 }
 
 export const SvamitvaPortal: React.FC<Props> = ({
@@ -53,18 +70,120 @@ export const SvamitvaPortal: React.FC<Props> = ({
   encroachmentResults,
   isAnalyzing,
   onRunAnalysis,
+  onParcelsUpdated,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [landTypeFilter, setLandTypeFilter] = useState<string>('ALL');
-  const [activeTab, setActiveTab] = useState<'parcels' | 'ror' | 'disputes' | 'card'>('parcels');
+  const [activeTab, setActiveTab] = useState<'source' | 'parcels' | 'ror' | 'disputes' | 'card'>('source');
   const [showNoticeModal, setShowNoticeModal] = useState(false);
   const [selectedConflict, setSelectedConflict] = useState<EncroachmentConflict | null>(null);
+
+  // Survey Source & Ingestion State
+  const [sourceMeta, setSourceMeta] = useState<SurveySourceMetadata | null>(null);
+  const [surveyFile, setSurveyFile] = useState<File | null>(null);
+  const [supplierInput, setSupplierInput] = useState<string>('');
+  const [surveyDateInput, setSurveyDateInput] = useState<string>('2026-10-08');
+  const [accuracyInput, setAccuracyInput] = useState<string>('Sub-5cm Drone Photogrammetry');
+  const [isUploadingSurvey, setIsUploadingSurvey] = useState<boolean>(false);
+  const [uploadResult, setUploadResult] = useState<SurveyUploadResponse | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // WFS State
+  const [wfsUrl, setWfsUrl] = useState<string>('https://svamitva.nic.in/geoserver/wfs');
+  const [wfsLayer, setWfsLayer] = useState<string>('svamitva:cadastral_drone_parcels');
+  const [isTestingWFS, setIsTestingWFS] = useState<boolean>(false);
+  const [wfsTestResult, setWfsTestResult] = useState<any | null>(null);
 
   // RoR state
   const [dossier, setDossier] = useState<RoRDossier | null>(null);
   const [loadingRoR, setLoadingRoR] = useState<boolean>(false);
   const [isDossierModalOpen, setIsDossierModalOpen] = useState<boolean>(false);
   const [copiedULPIN, setCopiedULPIN] = useState<boolean>(false);
+
+  // Load Source Metadata on mount
+  const loadSourceState = async () => {
+    try {
+      const res = await fetchSurveySourceState();
+      setSourceMeta(res.metadata);
+    } catch (e) {
+      console.warn('Failed to fetch survey source state:', e);
+    }
+  };
+
+  useEffect(() => {
+    loadSourceState();
+  }, []);
+
+  // Handlers for Survey Ingestion
+  const handleSurveyFileUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!surveyFile) {
+      setUploadError('Please select a GeoJSON survey file.');
+      return;
+    }
+    setIsUploadingSurvey(true);
+    setUploadError(null);
+    setUploadResult(null);
+
+    try {
+      const result = await uploadSurveyGeoJSON(
+        surveyFile,
+        supplierInput || 'Field Survey Team',
+        surveyDateInput || 'Unknown',
+        accuracyInput
+      );
+      setUploadResult(result);
+      await loadSourceState();
+      if (onParcelsUpdated) {
+        onParcelsUpdated();
+      }
+    } catch (err: any) {
+      setUploadError(err.message || 'GeoJSON upload failed.');
+    } finally {
+      setIsUploadingSurvey(false);
+    }
+  };
+
+  const handleTestWFS = async () => {
+    setIsTestingWFS(true);
+    setWfsTestResult(null);
+    try {
+      const res = await testWFSConnection(wfsUrl, wfsLayer);
+      setWfsTestResult(res);
+    } catch (err: any) {
+      setWfsTestResult({
+        status: 'CONNECTION_FAILED',
+        connected: false,
+        message: err.message || 'WFS test failed.'
+      });
+    } finally {
+      setIsTestingWFS(false);
+    }
+  };
+
+  const handleLoadDemoDataset = async () => {
+    try {
+      await loadDemoSurvey();
+      await loadSourceState();
+      if (onParcelsUpdated) {
+        onParcelsUpdated();
+      }
+    } catch (err: any) {
+      alert(`Failed to load demo: ${err.message}`);
+    }
+  };
+
+  const handleClearSurveyDataset = async () => {
+    try {
+      await clearSurveySource();
+      await loadSourceState();
+      if (onParcelsUpdated) {
+        onParcelsUpdated();
+      }
+    } catch (err: any) {
+      alert(`Failed to clear survey: ${err.message}`);
+    }
+  };
 
   // Load RoR dossier whenever selectedParcel changes
   useEffect(() => {
@@ -127,25 +246,48 @@ export const SvamitvaPortal: React.FC<Props> = ({
       <div className="bg-[#23201F] text-white p-4 rounded-2xl shadow-sm border border-[#383432]">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-full bg-[#C85A32] text-[10px] font-bold uppercase tracking-wider">
-                SVAMITVA Scheme
-              </span>
+            <div className="flex items-center gap-2 flex-wrap">
+              {sourceMeta?.state === 'CONFIGURED_WFS' && (
+                <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
+                  <Globe className="w-3 h-3" />
+                  <span>OGC WFS Source</span>
+                </span>
+              )}
+              {sourceMeta?.state === 'UPLOADED_FILE' && (
+                <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
+                  <Upload className="w-3 h-3" />
+                  <span>Uploaded Survey File</span>
+                </span>
+              )}
+              {sourceMeta?.state === 'SYNTHETIC_DEMO' && (
+                <span className="px-2 py-0.5 rounded-full bg-amber-600 text-white text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
+                  <Database className="w-3 h-3" />
+                  <span>Synthetic Demo Dataset</span>
+                </span>
+              )}
+              {(!sourceMeta || sourceMeta.state === 'NO_SOURCE') && (
+                <span className="px-2 py-0.5 rounded-full bg-gray-600 text-white text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
+                  <AlertCircle className="w-3 h-3" />
+                  <span>No Survey Source Configured</span>
+                </span>
+              )}
               <span className="text-gray-400 text-xs font-mono">
-                LGD Code: {selectedParcel.properties.village_lgd_code}
+                LGD Code: {selectedParcel?.properties?.village_lgd_code || '142890'}
               </span>
             </div>
             <h2 className="text-base font-bold text-[#FBF9F5] mt-1 flex items-center gap-2">
               <Building2 className="w-4 h-4 text-[#C85A32]" />
-              {selectedParcel.properties.village}
+              {selectedParcel?.properties?.village || 'Rampur Kalan (Abadi)'}
             </h2>
             <p className="text-xs text-gray-300 mt-0.5">
-              Tehsil {selectedParcel.properties.tehsil}, Dist. {selectedParcel.properties.district}, {selectedParcel.properties.state}
+              Tehsil {selectedParcel?.properties?.tehsil || 'Bakshi Ka Talab'}, Dist. {selectedParcel?.properties?.district || 'Lucknow'}, {selectedParcel?.properties?.state || 'Uttar Pradesh'}
             </p>
           </div>
           <div className="text-right shrink-0">
             <span className="text-[10px] text-gray-400 block">Resolution</span>
-            <span className="text-xs font-mono font-bold text-emerald-400">GSD &lt; 5cm UAV</span>
+            <span className="text-xs font-mono font-bold text-emerald-400">
+              {sourceMeta?.accuracy_metadata || 'GSD < 5cm UAV'}
+            </span>
           </div>
         </div>
 
@@ -157,7 +299,7 @@ export const SvamitvaPortal: React.FC<Props> = ({
               Metric Buffer Distance
             </span>
             <span className="font-mono font-bold text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-600/30 text-xs">
-              {bufferDistance.toFixed(1)} Metres (UTM EPSG:32644)
+              {bufferDistance.toFixed(1)} Metres (UTM EPSG:{selectedParcel?.properties?.calculated_utm_epsg || '32644'})
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -181,6 +323,18 @@ export const SvamitvaPortal: React.FC<Props> = ({
 
       {/* Navigation Tabs */}
       <div className="flex items-center gap-1 bg-[#E7DFD5] p-1 rounded-xl text-xs font-bold text-[#383432]">
+        <button
+          onClick={() => setActiveTab('source')}
+          className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all flex items-center justify-center gap-1 ${
+            activeTab === 'source'
+              ? 'bg-[#23201F] text-white shadow-xs'
+              : 'hover:bg-white/40 text-blue-800'
+          }`}
+        >
+          <Database className="w-3.5 h-3.5 text-blue-500" />
+          <span>Source &amp; Ingest</span>
+        </button>
+
         <button
           onClick={() => setActiveTab('parcels')}
           className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all ${
@@ -228,6 +382,259 @@ export const SvamitvaPortal: React.FC<Props> = ({
           <span>Gharouni</span>
         </button>
       </div>
+
+      {/* TAB 0: SURVEY SOURCE & INGESTION ENGINE */}
+      {activeTab === 'source' && (
+        <div className="space-y-3.5 animate-in fade-in duration-150">
+          {/* Active Source Provenance Card */}
+          <div className="bg-white p-4 rounded-2xl border border-[#E7DFD5] shadow-2xs space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-[#23201F] flex items-center gap-1.5">
+                <Layers className="w-4 h-4 text-blue-600" />
+                Active Survey Provenance &amp; State
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-gray-100 font-bold text-gray-700">
+                {sourceMeta?.state || 'NO_SOURCE'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-[11px] bg-[#FAF7F2] p-2.5 rounded-xl border border-[#E7DFD5]">
+              <div>
+                <span className="text-gray-400 block text-[10px]">Source Type:</span>
+                <span className="font-bold text-[#23201F]">{sourceMeta?.source_type || 'None'}</span>
+              </div>
+              <div>
+                <span className="text-gray-400 block text-[10px]">Dataset ID:</span>
+                <span className="font-mono font-bold text-purple-700">{sourceMeta?.dataset_id || 'none'}</span>
+              </div>
+              <div>
+                <span className="text-gray-400 block text-[10px]">Original File / Layer:</span>
+                <span className="font-medium text-gray-700 truncate block" title={sourceMeta?.original_filename}>
+                  {sourceMeta?.original_filename || 'N/A'}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-400 block text-[10px]">Source CRS:</span>
+                <span className="font-mono text-gray-700">{sourceMeta?.source_crs || 'EPSG:4326'}</span>
+              </div>
+              <div>
+                <span className="text-gray-400 block text-[10px]">Survey Date / Supplier:</span>
+                <span className="text-gray-700">{sourceMeta?.survey_date} • {sourceMeta?.supplier}</span>
+              </div>
+              <div>
+                <span className="text-gray-400 block text-[10px]">SHA-256 Checksum:</span>
+                <span className="font-mono text-[9px] text-gray-600 truncate block" title={sourceMeta?.sha256_checksum || 'N/A'}>
+                  {sourceMeta?.sha256_checksum ? `${sourceMeta.sha256_checksum.slice(0, 16)}...` : 'N/A'}
+                </span>
+              </div>
+            </div>
+
+            {/* Disclaimer Notice */}
+            <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-200 text-[10px] text-amber-900 leading-relaxed">
+              <strong>Notice: </strong>
+              {sourceMeta?.disclaimer || 'No survey source configured. Upload a GeoJSON file or test WFS connector.'}
+            </div>
+          </div>
+
+          {/* Upload GeoJSON FeatureCollection Form */}
+          <div className="bg-white p-4 rounded-2xl border border-[#E7DFD5] shadow-2xs space-y-3">
+            <div className="flex items-center gap-1.5">
+              <Upload className="w-4 h-4 text-[#C85A32]" />
+              <h3 className="font-bold text-xs text-[#23201F]">
+                Ingest Cadastral Survey File (GeoJSON FeatureCollection)
+              </h3>
+            </div>
+            <p className="text-[11px] text-[#6B6360]">
+              Validates Polygon and MultiPolygon geometry, interior rings (holes), coordinate finiteness, and duplicate source parcel IDs without silent alterations.
+            </p>
+
+            <form onSubmit={handleSurveyFileUpload} className="space-y-2.5 text-xs">
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                  GeoJSON Survey File (.geojson / .json)
+                </label>
+                <input
+                  type="file"
+                  accept=".geojson,.json,application/geo+json,application/json"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      setSurveyFile(e.target.files[0]);
+                    }
+                  }}
+                  className="w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#C85A32] file:text-white hover:file:bg-[#a64420] file:cursor-pointer cursor-pointer border border-[#E7DFD5] p-1.5 rounded-xl bg-[#FAF7F2]"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Supplier / Agency</label>
+                  <input
+                    type="text"
+                    value={supplierInput}
+                    onChange={(e) => setSupplierInput(e.target.value)}
+                    placeholder="e.g. Survey of India / Drone Vendor"
+                    className="w-full p-2 bg-[#FAF7F2] border border-[#E7DFD5] rounded-xl text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Survey Date</label>
+                  <input
+                    type="date"
+                    value={surveyDateInput}
+                    onChange={(e) => setSurveyDateInput(e.target.value)}
+                    className="w-full p-2 bg-[#FAF7F2] border border-[#E7DFD5] rounded-xl text-xs"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isUploadingSurvey || !surveyFile}
+                className="w-full py-2.5 px-4 rounded-xl bg-[#C85A32] text-white font-bold hover:bg-[#a64420] transition-colors flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50 text-xs"
+              >
+                <FileCheck className="w-4 h-4" />
+                <span>{isUploadingSurvey ? 'Validating Geometry & Ingesting...' : 'Validate & Ingest Survey File'}</span>
+              </button>
+            </form>
+
+            {uploadError && (
+              <div className="bg-red-50 text-red-800 p-3 rounded-xl border border-red-200 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                <span>{uploadError}</span>
+              </div>
+            )}
+
+            {uploadResult && (
+              <div className="bg-emerald-50 text-emerald-900 p-3.5 rounded-xl border border-emerald-300 text-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold flex items-center gap-1">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>{uploadResult.status}</span>
+                  </span>
+                  <span className="font-mono text-[10px] bg-emerald-200 text-emerald-900 font-bold px-2 py-0.5 rounded-full">
+                    {uploadResult.imported_count} Parcels Active
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[10px] font-mono bg-white/70 p-2 rounded-lg border border-emerald-200">
+                  <div>
+                    <span className="text-gray-500 block">SHA-256:</span>
+                    <span className="truncate block font-bold">{uploadResult.sha256_checksum.slice(0, 16)}...</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 block">Rejected Features:</span>
+                    <span className="font-bold text-red-700">{uploadResult.rejected_count}</span>
+                  </div>
+                </div>
+
+                {uploadResult.rejected_count > 0 && (
+                  <div className="space-y-1">
+                    <span className="font-bold text-[11px] text-red-800">Rejected Feature Explanations:</span>
+                    <ul className="list-disc pl-4 text-[10px] text-red-700 space-y-0.5">
+                      {uploadResult.rejected_features.map((err, i) => (
+                        <li key={i}>Index #{err.feature_index}: {err.reason}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* WFS GeoServer Connector Card */}
+          <div className="bg-white p-4 rounded-2xl border border-[#E7DFD5] shadow-2xs space-y-2.5">
+            <div className="flex items-center gap-1.5">
+              <Globe className="w-4 h-4 text-emerald-700" />
+              <h3 className="font-bold text-xs text-[#23201F]">
+                Remote GIS / WFS GeoServer Connector
+              </h3>
+            </div>
+            <p className="text-[11px] text-[#6B6360]">
+              Tests OGC WFS 2.0.0 GetCapabilities and DescribeFeatureType. Restricts queries to allowed host whitelist.
+            </p>
+
+            <div className="space-y-2 text-xs">
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-500 mb-0.5">WFS Server URL</label>
+                <input
+                  type="text"
+                  value={wfsUrl}
+                  onChange={(e) => setWfsUrl(e.target.value)}
+                  placeholder="https://svamitva.nic.in/geoserver/wfs"
+                  className="w-full p-2 bg-[#FAF7F2] border border-[#E7DFD5] rounded-xl text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Target Layer Name</label>
+                <input
+                  type="text"
+                  value={wfsLayer}
+                  onChange={(e) => setWfsLayer(e.target.value)}
+                  placeholder="svamitva:cadastral_drone_parcels"
+                  className="w-full p-2 bg-[#FAF7F2] border border-[#E7DFD5] rounded-xl text-xs font-mono"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleTestWFS}
+                disabled={isTestingWFS}
+                className="w-full py-2 px-3 rounded-xl bg-[#23201F] text-white font-bold hover:bg-black transition-colors flex items-center justify-center gap-1.5 text-xs disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isTestingWFS ? 'animate-spin' : ''}`} />
+                <span>{isTestingWFS ? 'Testing WFS Capabilities...' : 'Test WFS Connection & Capabilities'}</span>
+              </button>
+            </div>
+
+            {wfsTestResult && (
+              <div className={`p-3 rounded-xl border text-xs space-y-1.5 ${
+                wfsTestResult.connected
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                  : 'bg-amber-50 border-amber-300 text-amber-900'
+              }`}>
+                <div className="flex items-center justify-between font-bold">
+                  <span>Status: {wfsTestResult.status}</span>
+                  <span className="text-[10px] font-mono">{wfsTestResult.connected ? '✓ VERIFIED' : 'UNAVAILABLE'}</span>
+                </div>
+                <p className="text-[11px]">{wfsTestResult.message}</p>
+                {wfsTestResult.configuration_guide && (
+                  <div className="bg-white/80 p-2 rounded-lg border border-black/10 font-mono text-[10px] space-y-1 mt-1">
+                    <span className="font-bold text-gray-700 block">Required Server Configuration Keys:</span>
+                    <ul className="list-disc pl-4 text-gray-600">
+                      {wfsTestResult.configuration_guide.required_keys.map((k: string, i: number) => (
+                        <li key={i}>{k}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Demo & Reset Controls */}
+          <div className="bg-[#FAF7F2] p-3 rounded-2xl border border-[#E7DFD5] flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={handleLoadDemoDataset}
+              className="flex-1 py-2 px-3 bg-white hover:bg-gray-50 border border-[#E7DFD5] text-[#23201F] font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-1 shadow-2xs"
+            >
+              <Database className="w-3.5 h-3.5 text-amber-600" />
+              <span>Load Labelled Synthetic Demo</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleClearSurveyDataset}
+              className="py-2 px-3 bg-gray-100 hover:bg-red-50 text-gray-700 hover:text-red-700 border border-gray-300 font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-1"
+              title="Clear survey parcels to test NO_SOURCE state"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-red-500" />
+              <span>Clear Source</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* TAB 1: PARCELS BROWSER */}
       {activeTab === 'parcels' && (
@@ -419,49 +826,85 @@ export const SvamitvaPortal: React.FC<Props> = ({
                     <Scale className="w-3.5 h-3.5 text-[#C85A32]" />
                     Area Discrepancy Reconciliation
                   </span>
-                  <span
-                    className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
-                      Math.abs(dossier.variance_analysis.variance_pct) <= 3.0
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : Math.abs(dossier.variance_analysis.variance_pct) <= 6.0
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}
-                  >
-                    {Math.abs(dossier.variance_analysis.variance_pct) <= 3.0
-                      ? 'Verified'
-                      : Math.abs(dossier.variance_analysis.variance_pct) <= 6.0
-                      ? 'Minor Deviation'
-                      : 'High Dispute Risk'}
-                  </span>
+                  {dossier.legal_registry.recorded_legal_area_sqm == null || dossier.legal_registry.recorded_legal_area_sqm === 0 ? (
+                    <span className="text-[9px] px-2 py-0.5 rounded-full font-bold uppercase bg-gray-100 text-gray-700 border border-gray-300">
+                      Registered Area Unavailable
+                    </span>
+                  ) : (dossier.variance_analysis.exceeds_threshold ?? ((dossier.variance_analysis.absolute_discrepancy_pct ?? 0) > 5.0)) ? (
+                    <span className="text-[9px] px-2 py-0.5 rounded-full font-bold uppercase bg-red-100 text-red-800 border border-red-200">
+                      Discrepancy &gt; 5.0% (Officer Review)
+                    </span>
+                  ) : (
+                    <span className="text-[9px] px-2 py-0.5 rounded-full font-bold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      Tolerance Acceptable (&le; 5.0%)
+                    </span>
+                  )}
                 </div>
 
                 {/* Prominent Comparison Badge */}
                 <div
-                  className={`p-2.5 rounded-xl text-xs font-semibold space-y-1 ${
-                    Math.abs(dossier.variance_analysis.variance_pct) <= 3.0
-                      ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
-                      : Math.abs(dossier.variance_analysis.variance_pct) <= 6.0
-                      ? 'bg-amber-50 text-amber-900 border border-amber-200'
-                      : 'bg-red-50 text-red-900 border border-red-200'
+                  className={`p-2.5 rounded-xl text-xs space-y-1.5 ${
+                    dossier.legal_registry.recorded_legal_area_sqm == null || dossier.legal_registry.recorded_legal_area_sqm === 0
+                      ? 'bg-gray-50 text-gray-800 border border-gray-200'
+                      : (dossier.variance_analysis.exceeds_threshold ?? ((dossier.variance_analysis.absolute_discrepancy_pct ?? 0) > 5.0))
+                      ? 'bg-red-50 text-red-900 border border-red-200'
+                      : 'bg-emerald-50 text-emerald-900 border border-emerald-200'
                   }`}
                 >
                   <div className="flex items-center justify-between text-[11px]">
                     <span>
-                      Drone Area: <strong>{dossier.spatial.actual_drone_area_sqm} m²</strong>
+                      Survey Area: <strong>{dossier.spatial.actual_survey_area_sqm ?? dossier.spatial.actual_drone_area_sqm} m²</strong>
                     </span>
                     <span>
-                      Registry Area: <strong>{dossier.legal_registry.recorded_legal_area_sqm} m²</strong>
+                      Registered Deed:{' '}
+                      <strong>
+                        {dossier.legal_registry.recorded_legal_area_sqm != null
+                          ? `${dossier.legal_registry.recorded_legal_area_sqm} m²`
+                          : 'Not Documented'}
+                      </strong>
                     </span>
                   </div>
+
                   <div className="flex items-center justify-between pt-1 border-t border-black/10 text-xs">
-                    <span>Variance Mismatch:</span>
+                    <span>Absolute Discrepancy:</span>
                     <span className="font-mono font-bold">
-                      {dossier.variance_analysis.variance_pct > 0 ? '+' : ''}
-                      {dossier.variance_analysis.variance_pct.toFixed(1)}% ({dossier.variance_analysis.variance_sqm > 0 ? '+' : ''}{dossier.variance_analysis.variance_sqm} m²)
+                      {dossier.variance_analysis.absolute_discrepancy_pct != null
+                        ? `${dossier.variance_analysis.absolute_discrepancy_pct.toFixed(3)}%`
+                        : 'N/A (Missing Registered Area)'}
+                    </span>
+                  </div>
+
+                  {dossier.variance_analysis.signed_area_change_sqm != null && (
+                    <div className="flex items-center justify-between text-[11px] text-gray-600">
+                      <span>Signed Area Change:</span>
+                      <span className="font-mono font-medium">
+                        {dossier.variance_analysis.signed_area_change_sqm > 0 ? '+' : ''}
+                        {dossier.variance_analysis.signed_area_change_sqm.toFixed(2)} m²
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Match Status & Provenance */}
+                <div className="grid grid-cols-2 gap-2 text-[10px] bg-[#FAF7F2] p-2 rounded-xl border border-[#E7DFD5]">
+                  <div>
+                    <span className="text-gray-500 block">Revenue Match Status:</span>
+                    <span className="font-bold text-gray-800">
+                      {dossier.legal_registry.match_status || 'PROTOTYPE_DEMO_MATCH'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 block">Photogrammetry GSD:</span>
+                    <span className="text-gray-700">
+                      {dossier.spatial.source_uncertainty || '±5cm UAV GSD'}
                     </span>
                   </div>
                 </div>
+
+                {/* Provisional Notice */}
+                <p className="text-[10px] text-gray-500 italic">
+                  {dossier.disclaimer || 'Provisional ULPIN and area reconciliation for prototype assessment. Official title authority rests with revenue inspector.'}
+                </p>
               </div>
 
               {/* CO-OWNERS WITH SPLIT EQUITY BARS */}

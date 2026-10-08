@@ -17,6 +17,8 @@ from services.ror_engine import derive_ror_record_for_parcel, derive_all_village
 
 router = APIRouter(prefix="/api/ror", tags=["Record of Rights (RoR) & Title Cards"])
 
+from services.survey_source_service import survey_source_service
+
 DATA_RAW_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "raw", "drone_parcels_raw.geojson")
 DATA_ROR_CACHE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "reconciled_ror.json")
 
@@ -25,18 +27,8 @@ _reconciled_cache: Dict[str, Dict[str, Any]] = {}
 
 
 def load_raw_features() -> List[Dict[str, Any]]:
-    """Load raw drone survey features."""
-    if not os.path.exists(DATA_RAW_PATH):
-        from scripts.scrape_drone_survey import generate_synthetic_drone_parcels
-        data = generate_synthetic_drone_parcels(count=72)
-        os.makedirs(os.path.dirname(DATA_RAW_PATH), exist_ok=True)
-        with open(DATA_RAW_PATH, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
-        return data.get("features", [])
-
-    with open(DATA_RAW_PATH, "r", encoding="utf-8") as f:
-        data = json.load(f)
-        return data.get("features", [])
+    """Retrieve currently active survey features from survey source service."""
+    return survey_source_service.get_active_parcels()
 
 
 def ensure_reconciled_cache():

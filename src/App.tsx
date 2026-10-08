@@ -118,6 +118,21 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleReloadSvamitva = async () => {
+    try {
+      const result = await fetchSvamitvaParcels();
+      if (result && result.features) {
+        setSvamitvaParcels(result.features);
+        if (result.features.length > 0) {
+          setSelectedSvamitvaParcelId(result.features[0].id || result.features[0].properties?.property_id);
+        }
+      }
+      handleRunEncroachments(bufferDistance);
+    } catch (e) {
+      console.warn('Reload error:', e);
+    }
+  };
+
   const selectedParcel = parcels.find((p) => p.id === selectedParcelId) || parcels[0];
   const selectedSvamitvaParcel =
     svamitvaParcels.find((p) => p.id === selectedSvamitvaParcelId || p.properties?.property_id === selectedSvamitvaParcelId) ||
@@ -193,6 +208,7 @@ export const App: React.FC = () => {
                 encroachmentResults={encroachmentResults}
                 isAnalyzing={isAnalyzingEncroachments}
                 onRunAnalysis={() => handleRunEncroachments(bufferDistance)}
+                onParcelsUpdated={handleReloadSvamitva}
               />
             ) : activeRole === 'citizen' ? (
               <CitizenPortal

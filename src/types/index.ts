@@ -141,6 +141,8 @@ export interface SvamitvaParcelProperties {
   village: string;
   village_lgd_code: string;
   is_public_road_adjacent: boolean;
+  calculated_utm_epsg?: string;
+  data_source_state?: string;
 }
 
 export interface SvamitvaParcel {
@@ -221,30 +223,48 @@ export interface RoRDisputeFlag {
 export interface RoRDossier {
   parcel_id: string;
   ulpin: string;
+  ulpin_status?: string;
   scheme: string;
   gharouni_card_no: string;
   khata_number: string;
   khasra_number: string;
   survey_plot_no: string;
   tenure_type: string;
+  provenance_state?: string;
   spatial: {
     centroid_wgs84: [number, number];
-    actual_drone_area_sqm: number;
-    actual_drone_area_acres: number;
-    accuracy_class: string;
-    survey_date: string;
+    actual_drone_area_sqm?: number;
+    actual_drone_area_acres?: number;
+    actual_survey_area_sqm?: number;
+    actual_survey_area_acres?: number;
+    calculated_utm_epsg?: string;
+    source_uncertainty?: string;
+    accuracy_class?: string;
+    survey_date?: string;
   };
   legal_registry: {
-    recorded_legal_area_sqm: number;
-    recorded_legal_area_acres: number;
-    area_unit_regional: string;
+    recorded_legal_area_sqm: number | null;
+    recorded_legal_area_acres?: number;
+    area_unit_regional?: string;
     registry_source: string;
+    match_status?: string;
+    matched_document?: any;
   };
   variance_analysis: {
-    variance_sqm: number;
-    variance_pct: number;
-    within_statutory_tolerance: boolean;
-    evaluation: string;
+    variance_sqm?: number;
+    variance_pct?: number;
+    within_statutory_tolerance?: boolean;
+    evaluation?: string;
+    survey_area_sqm?: number;
+    registered_area_sqm?: number | null;
+    absolute_discrepancy_pct?: number | null;
+    signed_area_change_sqm?: number | null;
+    signed_area_change_pct?: number | null;
+    status?: string;
+    exceeds_threshold?: boolean;
+    requires_review?: boolean;
+    tolerance_threshold_pct?: number;
+    message?: string;
   };
   chauhaddi: {
     north: ChauhaddiNeighbor;
@@ -265,8 +285,9 @@ export interface RoRDossier {
     tehsil: string;
     district: string;
     state: string;
-    village_lgd_code: string;
+    village_lgd_code?: string;
   };
+  disclaimer?: string;
 }
 
 export interface PropertyCardCertificate {

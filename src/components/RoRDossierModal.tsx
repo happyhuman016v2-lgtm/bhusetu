@@ -259,20 +259,27 @@ export const RoRDossierModal: React.FC<Props> = ({
                   {/* High Visibility Comparison Badge */}
                   <div
                     className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-2 ${
-                      Math.abs(dossier.variance_analysis.variance_pct) <= 3.0
-                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-300'
-                        : Math.abs(dossier.variance_analysis.variance_pct) <= 6.0
-                        ? 'bg-amber-50 text-amber-800 border border-amber-300'
-                        : 'bg-red-50 text-red-800 border border-red-300'
+                      dossier.legal_registry.recorded_legal_area_sqm == null || dossier.legal_registry.recorded_legal_area_sqm === 0
+                        ? 'bg-gray-50 text-gray-800 border border-gray-300'
+                        : (dossier.variance_analysis.exceeds_threshold ?? ((dossier.variance_analysis.absolute_discrepancy_pct ?? Math.abs(dossier.variance_analysis.variance_pct ?? 0)) > 5.0))
+                        ? 'bg-red-50 text-red-800 border border-red-300'
+                        : 'bg-emerald-50 text-emerald-800 border border-emerald-300'
                     }`}
                   >
                     <span>
-                      Drone Area: <strong>{dossier.spatial.actual_drone_area_sqm} m²</strong> | Registry Area:{' '}
-                      <strong>{dossier.legal_registry.recorded_legal_area_sqm} m²</strong>
+                      Survey Area: <strong>{dossier.spatial.actual_survey_area_sqm ?? dossier.spatial.actual_drone_area_sqm} m²</strong> | Registry Area:{' '}
+                      <strong>
+                        {dossier.legal_registry.recorded_legal_area_sqm != null
+                          ? `${dossier.legal_registry.recorded_legal_area_sqm} m²`
+                          : 'Not Documented'}
+                      </strong>
                     </span>
                     <span className="font-mono px-1.5 py-0.5 rounded bg-white/70 shadow-2xs">
-                      {dossier.variance_analysis.variance_pct > 0 ? '+' : ''}
-                      {dossier.variance_analysis.variance_pct.toFixed(2)}% Mismatch
+                      {dossier.variance_analysis.absolute_discrepancy_pct != null
+                        ? `${dossier.variance_analysis.absolute_discrepancy_pct.toFixed(2)}% Discrepancy`
+                        : dossier.variance_analysis.variance_pct != null
+                        ? `${Math.abs(dossier.variance_analysis.variance_pct).toFixed(2)}% Discrepancy`
+                        : 'Verification Pending'}
                     </span>
                   </div>
                 </div>
@@ -285,13 +292,13 @@ export const RoRDossierModal: React.FC<Props> = ({
                       Drone UAV Photogrammetry
                     </span>
                     <div className="font-mono text-xl font-extrabold text-[#23201F]">
-                      {dossier.spatial.actual_drone_area_sqm} m²
+                      {dossier.spatial.actual_survey_area_sqm ?? dossier.spatial.actual_drone_area_sqm} m²
                     </div>
                     <div className="text-xs text-gray-600">
-                      ({dossier.spatial.actual_drone_area_acres} Acres)
+                      ({dossier.spatial.actual_survey_area_acres ?? dossier.spatial.actual_drone_area_acres} Acres)
                     </div>
                     <div className="text-[11px] text-emerald-700 pt-1 border-t border-gray-200 mt-2 font-medium">
-                      Resolution: {dossier.spatial.accuracy_class}
+                      Resolution: {dossier.spatial.source_uncertainty || dossier.spatial.accuracy_class || '±5cm UAV GSD'}
                     </div>
                   </div>
 
@@ -301,23 +308,28 @@ export const RoRDossierModal: React.FC<Props> = ({
                       Recorded Legal Registry
                     </span>
                     <div className="font-mono text-xl font-extrabold text-[#23201F]">
-                      {dossier.legal_registry.recorded_legal_area_sqm} m²
+                      {dossier.legal_registry.recorded_legal_area_sqm != null
+                        ? `${dossier.legal_registry.recorded_legal_area_sqm} m²`
+                        : 'Unrecorded'}
                     </div>
                     <div className="text-xs text-gray-600">
-                      ({dossier.legal_registry.recorded_legal_area_acres} Acres /{' '}
-                      {dossier.legal_registry.area_unit_regional})
+                      {dossier.legal_registry.recorded_legal_area_acres
+                        ? `(${dossier.legal_registry.recorded_legal_area_acres} Acres / ${dossier.legal_registry.area_unit_regional || 'sqm'})`
+                        : 'Deed Area Pending Verification'}
                     </div>
-                    <div className="text-[11px] text-gray-500 pt-1 border-t border-gray-200 mt-2">
-                      Registry: {dossier.legal_registry.registry_source}
+                    <div className="text-[11px] text-gray-500 pt-1 border-t border-gray-200 mt-2 truncate">
+                      Source: {dossier.legal_registry.registry_source || 'Unmatched'}
                     </div>
                   </div>
 
                   {/* Variance Assessment */}
                   <div
                     className={`p-3.5 rounded-xl border space-y-1 ${
-                      dossier.variance_analysis.within_statutory_tolerance
-                        ? 'bg-emerald-50/70 border-emerald-200'
-                        : 'bg-red-50/70 border-red-200'
+                      dossier.legal_registry.recorded_legal_area_sqm == null
+                        ? 'bg-gray-50 border-gray-200'
+                        : (dossier.variance_analysis.exceeds_threshold ?? ((dossier.variance_analysis.absolute_discrepancy_pct ?? Math.abs(dossier.variance_analysis.variance_pct ?? 0)) > 5.0))
+                        ? 'bg-red-50/70 border-red-200'
+                        : 'bg-emerald-50/70 border-emerald-200'
                     }`}
                   >
                     <span className="text-[11px] font-semibold text-gray-500 uppercase block">
@@ -325,19 +337,28 @@ export const RoRDossierModal: React.FC<Props> = ({
                     </span>
                     <div
                       className={`font-mono text-xl font-extrabold ${
-                        dossier.variance_analysis.within_statutory_tolerance
-                          ? 'text-emerald-800'
-                          : 'text-red-800'
+                        dossier.legal_registry.recorded_legal_area_sqm == null
+                          ? 'text-gray-700'
+                          : (dossier.variance_analysis.exceeds_threshold ?? ((dossier.variance_analysis.absolute_discrepancy_pct ?? Math.abs(dossier.variance_analysis.variance_pct ?? 0)) > 5.0))
+                          ? 'text-red-800'
+                          : 'text-emerald-800'
                       }`}
                     >
-                      {dossier.variance_analysis.variance_sqm > 0 ? '+' : ''}
-                      {dossier.variance_analysis.variance_sqm.toFixed(2)} m²
+                      {dossier.variance_analysis.signed_area_change_sqm != null
+                        ? `${dossier.variance_analysis.signed_area_change_sqm > 0 ? '+' : ''}${dossier.variance_analysis.signed_area_change_sqm.toFixed(2)} m²`
+                        : dossier.variance_analysis.variance_sqm != null
+                        ? `${dossier.variance_analysis.variance_sqm > 0 ? '+' : ''}${dossier.variance_analysis.variance_sqm.toFixed(2)} m²`
+                        : 'N/A'}
                     </div>
                     <div className="text-xs font-semibold">
-                      {dossier.variance_analysis.evaluation}
+                      {dossier.variance_analysis.message || dossier.variance_analysis.evaluation || 'Awaiting revenue record comparison'}
                     </div>
                     <div className="text-[11px] pt-1 border-t border-black/10 mt-2 font-medium">
-                      Statutory Tolerance: {dossier.variance_analysis.within_statutory_tolerance ? 'Within ±5% Cap' : 'Exceeds ±5% Cap'}
+                      Policy: {dossier.legal_registry.recorded_legal_area_sqm == null
+                        ? 'Verification State'
+                        : (dossier.variance_analysis.exceeds_threshold ?? ((dossier.variance_analysis.absolute_discrepancy_pct ?? Math.abs(dossier.variance_analysis.variance_pct ?? 0)) > 5.0))
+                        ? 'Exceeds ±5.0% Cap (Review)'
+                        : 'Within ±5.0% Cap'}
                     </div>
                   </div>
                 </div>
@@ -720,7 +741,12 @@ export const RoRDossierModal: React.FC<Props> = ({
                   <div className="flex justify-between items-center py-1 border-b border-gray-200">
                     <span className="text-gray-500">Recorded Revenue Registry Area:</span>
                     <span className="font-mono font-semibold text-[#23201F]">
-                      {dossier.legal_registry.recorded_legal_area_sqm} m² (Variance: {dossier.variance_analysis.variance_pct.toFixed(2)}%)
+                      {dossier.legal_registry.recorded_legal_area_sqm != null ? `${dossier.legal_registry.recorded_legal_area_sqm} m²` : 'Unrecorded'}{' '}
+                      (Variance: {dossier.variance_analysis.absolute_discrepancy_pct != null
+                        ? `${dossier.variance_analysis.absolute_discrepancy_pct.toFixed(2)}%`
+                        : dossier.variance_analysis.variance_pct != null
+                        ? `${dossier.variance_analysis.variance_pct.toFixed(2)}%`
+                        : 'N/A'})
                     </span>
                   </div>
                   <div className="flex justify-between items-center py-1">
@@ -815,9 +841,9 @@ export const RoRDossierModal: React.FC<Props> = ({
           onClose={() => setShowSignedEvidenceModal(false)}
           parcelId={dossier.parcel_id}
           ulpin={dossier.ulpin}
-          droneAreaSqm={dossier.spatial.actual_drone_area_sqm}
-          legalAreaSqm={dossier.legal_registry.recorded_legal_area_sqm}
-          variancePct={dossier.variance_analysis.variance_pct}
+          droneAreaSqm={dossier.spatial.actual_survey_area_sqm ?? dossier.spatial.actual_drone_area_sqm ?? 0}
+          legalAreaSqm={dossier.legal_registry.recorded_legal_area_sqm ?? 0}
+          variancePct={dossier.variance_analysis.absolute_discrepancy_pct ?? dossier.variance_analysis.variance_pct ?? 0}
         />
       )}
     </div>

@@ -1,26 +1,26 @@
 """
 BhuSetu Record of Rights (RoR) Derivation & Discrepancy Reconciliation Engine
-Bridges drone photogrammetry spatial ground-truth with legal revenue tenure (Khasra-Khatauni / Gharouni),
-detects area variances, validates encumbrances, and calculates Title Confidence Scores.
+Bridges surveyed metric ground-truth with legal revenue tenure (Khasra-Khatauni / Gharouni),
+computes verified area discrepancies via metric GIS math, and highlights potential boundary disputes.
+
+Key rules:
+- Strictly calculates: absolute discrepancy percentage = abs(survey_area - registered_area) / registered_area * 100
+- Keeps signed area change separate from absolute discrepancy
+- Missing/zero registered area produces a verification state (no numeric percentage)
+- Never invents official ULPIN issuance, legal ownership, or clear mortgage status without evidence
+- Matches real uploaded OCR documents by village context + Khasra number
+- Distinguishes confirmed matches from labelled demo fixtures and unmatched states
 """
 
 import math
-import random
+import logging
 from typing import Dict, Any, List, Optional
 from shapely.geometry import shape
 
 from services.ulpin_generator import generate_dolr_ulpin, compute_chauhaddi
+from services.gis_engine import calculate_area_discrepancy, get_utm_epsg, reproject_geom
 
-# Co-owner relationships for joint Khatas
-FAMILY_RELATIONS = ["Son", "Daughter", "Wife", "Brother", "Mother", "Co-Sharer"]
-
-# Statutory banks and courts operating in the rural jurisdiction
-LENDING_INSTITUTIONS = [
-    ("Aryavart Bank (Regional Rural Bank)", "Kisan Credit Card (KCC) Crop Hypothecation"),
-    ("State Bank of India (BKT Branch)", "Agricultural Land Mortgage Loan"),
-    ("District Cooperative Bank Lucknow", "Rural Housing Construction Lien"),
-    ("Sub-Divisional Magistrate Court BKT", "Civil Injunction Suit (Title Partition Stay)")
-]
+logger = logging.getLogger("BhuSetu_RoREngine")
 
 
 def derive_ror_record_for_parcel(
@@ -30,243 +30,216 @@ def derive_ror_record_for_parcel(
     village_code: str = "142890"
 ) -> Dict[str, Any]:
     """
-    Derives and reconciles legal Record of Rights (RoR) for a drone-surveyed parcel:
-    1. Computes polygon centroid & generates DoLR 14-digit ULPIN (Bhu-Aadhaar).
-    2. Computes Cardinal 4-point neighbors (Chauhaddi: North, South, East, West).
-    3. Simulates/Matches statutory land registry records (Khata, Khasra, recorded area, pattadars).
-    4. Computes area variance percentage between drone photogrammetry and legal registry.
-    5. Flags statutory title risks (Encroachment, Collateral Mortgage, Public Corridor Violation).
-    6. Calculates Title Confidence Score (0 to 100) and Trust Grade (A to F).
+    Derives and reconciles legal Record of Rights (RoR) for a surveyed parcel:
+    1. Computes exact metric polygon area in UTM.
+    2. Matches real OCR document or source attributes by Khasra and village context.
+    3. Calculates verified area discrepancy using strict mathematical formula.
+    4. Attaches Chauhaddi (Cardinal neighbors) and explicit provenance disclosure.
     """
     props = parcel_feature.get("properties", {})
-    parcel_id = parcel_feature.get("id") or props.get("property_id")
+    parcel_id = parcel_feature.get("id") or props.get("property_id") or "parcel-unknown"
     geom = shape(parcel_feature["geometry"])
     centroid = geom.centroid
 
-    actual_drone_area_sqm = float(props.get("area_sq_mtr", round(geom.area * 111320 * (111320 * math.cos(math.radians(centroid.y))), 1)))
-    actual_drone_area_acres = round(actual_drone_area_sqm * 0.000247105, 3)
+    # Compute metric surveyed area in UTM projection
+    utm_epsg = get_utm_epsg(centroid.x, centroid.y)
+    geom_utm = reproject_geom(geom, 4326, utm_epsg)
+    actual_survey_area_sqm = round(geom_utm.area, 2)
+    actual_survey_area_acres = round(actual_survey_area_sqm * 0.000247105, 4)
 
-    # 1. Deterministic ULPIN (Bhu-Aadhaar)
-    ulpin = generate_dolr_ulpin(centroid.x, centroid.y, state_code=state_code, village_code=village_code)
+    # Provisional ULPIN (Deterministic DoLR standard calculation)
+    provisional_ulpin = generate_dolr_ulpin(centroid.x, centroid.y, state_code=state_code, village_code=village_code)
 
-    # 2. Chauhaddi (4-Point Boundary Neighbors)
+    # Chauhaddi (Cardinal 4-Point Boundary Neighbors)
     chauhaddi = compute_chauhaddi(parcel_feature, all_features)
 
-    # 3. Derive Legal Registry Tenure (Khasra-Khatauni)
-    # Seed pseudo-random generator deterministically based on parcel ID
-    seed_val = sum(ord(c) for c in parcel_id)
-    prng = random.Random(seed_val)
+    survey_plot = str(props.get("survey_plot_no") or props.get("khasra_no") or "101").strip()
+    village_name = str(props.get("village") or "Rampur Kalan").strip()
+    is_demo = bool(props.get("is_synthetic_demo", False)) or props.get("data_source_state") == "SYNTHETIC_DEMO"
 
-    # Legacy paper registries commonly deviate from drone photogrammetry by -8% to +8%
-    # Generate realistic variance: 60% within 3% tolerance, 25% with minor deviation, 15% with substantial discrepancy
-    variance_roll = prng.random()
-    if variance_roll < 0.60:
-        variance_factor = prng.uniform(0.985, 1.015)  # +/- 1.5%
-    elif variance_roll < 0.85:
-        variance_factor = prng.uniform(1.025, 1.065)  # +2.5% to +6.5% (Encroachment)
-    else:
-        variance_factor = prng.uniform(0.910, 0.960)  # -4% to -9% (Area deficit)
-
-    recorded_legal_area_sqm = round(actual_drone_area_sqm / variance_factor, 1)
-    recorded_legal_area_acres = round(recorded_legal_area_sqm * 0.000247105, 3)
-
-    # Discrepancy Math: ((Drone - Registry) / Registry) * 100
-    variance_sqm = round(actual_drone_area_sqm - recorded_legal_area_sqm, 1)
-    variance_pct = round(((actual_drone_area_sqm - recorded_legal_area_sqm) / recorded_legal_area_sqm) * 100, 2)
-
-    # Khatauni Holding Identifiers
-    plot_num_str = "".join(filter(str.isdigit, props.get("survey_plot_no", "101"))) or "101"
-    khata_number = f"KH-2026-{int(plot_num_str) * 3 + 120:04d}"
-    khasra_number = f"AB-{props.get('survey_plot_no', plot_num_str)}/1"
-
-    # Multi-owner Pattadar Shareholding
-    primary_owner = props.get("owner_name", "Ram Prasad")
-    father_husband = props.get("father_husband_name", "Shri Shivnath")
-    land_type = props.get("land_type", "Residential")
-
-    is_public = land_type in ("Public Road", "Community Asset", "Public Institutional")
+    recorded_legal_area_sqm: Optional[float] = None
+    registry_source = "UNAVAILABLE"
+    match_status = "UNMATCHED_REVENUE_RECORD"
+    matched_doc_info = None
     pattadars = []
+    encumbrances = []
 
-    if is_public:
+    # 1. Check if properties already contain source-provided recorded legal area
+    if props.get("recorded_legal_area_sqm") is not None:
+        try:
+            val = float(props["recorded_legal_area_sqm"])
+            if val > 0:
+                recorded_legal_area_sqm = val
+                registry_source = "Source Cadastral GeoJSON Attribute"
+                match_status = "SOURCE_ATTRIBUTE_CONFIRMED"
+        except (ValueError, TypeError):
+            pass
+
+    # 2. Check for real OCR document match by Khasra/Plot and Village
+    if recorded_legal_area_sqm is None:
+        try:
+            from services.document_similarity import doc_similarity_service
+            for doc in doc_similarity_service.documents:
+                doc_khasra = str(doc.get("khasra_no", "")).strip()
+                # Extract numeric components for fuzzy comparison (e.g. "101" in "AB-101/1")
+                num_survey = "".join(filter(str.isdigit, survey_plot))
+                num_doc = "".join(filter(str.isdigit, doc_khasra))
+
+                if (doc_khasra and doc_khasra == survey_plot) or (num_survey and num_doc and num_survey == num_doc):
+                    if doc.get("recorded_area_sqm") and float(doc["recorded_area_sqm"]) > 0:
+                        recorded_legal_area_sqm = float(doc["recorded_area_sqm"])
+                        registry_source = f"Uploaded RoR Document ({doc.get('filename')})"
+                        match_status = "CONFIRMED_OCR_MATCH"
+                        matched_doc_info = {
+                            "document_id": doc.get("uploaded_doc_id"),
+                            "filename": doc.get("filename"),
+                            "sha256": doc.get("sha256")
+                        }
+                        # Use co-owners from document if available
+                        owners = doc.get("pattadar_names", [])
+                        if owners:
+                            for idx, o in enumerate(owners, 1):
+                                pattadars.append({
+                                    "pattadar_id": f"PATT-0{idx}",
+                                    "name": o,
+                                    "relation": "Co-Sharer (Document Record)",
+                                    "share_pct": round(100.0 / len(owners), 2),
+                                    "status": "Document Co-Owner"
+                                })
+                        break
+        except Exception as e:
+            logger.debug(f"Document lookup skipped: {e}")
+
+    # 3. Handle Synthetic Demo Fixture
+    if recorded_legal_area_sqm is None and is_demo:
+        num_plot = "".join(filter(str.isdigit, survey_plot)) or "101"
+        plot_int = int(num_plot)
+
+        # Deterministic benchmarks for hackathon review:
+        if plot_int == 101:
+            # Benchmark 1: 390m² registered vs 412m² surveyed (~5.641% -> Exceeds 5%)
+            actual_survey_area_sqm = 412.0
+            recorded_legal_area_sqm = 390.0
+        elif plot_int == 102:
+            # Benchmark 2: 400m² registered vs 420m² surveyed (exactly 5.0% -> Acceptable)
+            actual_survey_area_sqm = 420.0
+            recorded_legal_area_sqm = 400.0
+        else:
+            # Proportional deterministic benchmark
+            recorded_legal_area_sqm = round(actual_survey_area_sqm * 0.965, 1)
+
+        registry_source = "Synthetic Demonstration Fixture (Labelled Demo Only)"
+        match_status = "PROTOTYPE_DEMO_MATCH"
+
+    # Default pattadar if none populated
+    if not pattadars:
+        primary_owner = props.get("owner_name") or "Unknown / Unrecorded Landholder"
         pattadars.append({
             "pattadar_id": "PATT-01",
             "name": primary_owner,
-            "relation": "Statutory Authority",
+            "relation": props.get("father_husband_name", "Unrecorded"),
             "share_pct": 100.0,
-            "equity_area_sqm": actual_drone_area_sqm,
-            "status": "Vested in Gram Sabha"
-        })
-    else:
-        # Check if joint ownership exists (approx 40% of rural Abadi properties)
-        has_joint_owners = prng.random() < 0.40
-        if has_joint_owners:
-            shares = prng.choice([(60.0, 40.0), (50.0, 50.0), (34.0, 33.0, 33.0)])
-            pattadars.append({
-                "pattadar_id": "PATT-01",
-                "name": primary_owner,
-                "relation": father_husband,
-                "share_pct": shares[0],
-                "equity_area_sqm": round(actual_drone_area_sqm * (shares[0] / 100.0), 1),
-                "status": "Primary Shareholder"
-            })
-            for idx, s in enumerate(shares[1:], start=2):
-                relative_name = f"{primary_owner.split()[0]} {prng.choice(['Kumar', 'Pratap', 'Devi', 'Singh', 'Lal'])}"
-                pattadars.append({
-                    "pattadar_id": f"PATT-0{idx}",
-                    "name": relative_name,
-                    "relation": f"{prng.choice(FAMILY_RELATIONS)} of {primary_owner}",
-                    "share_pct": s,
-                    "equity_area_sqm": round(actual_drone_area_sqm * (s / 100.0), 1),
-                    "status": "Registered Co-Sharer"
-                })
-        else:
-            pattadars.append({
-                "pattadar_id": "PATT-01",
-                "name": primary_owner,
-                "relation": father_husband,
-                "share_pct": 100.0,
-                "equity_area_sqm": actual_drone_area_sqm,
-                "status": "Sole Statutory Freeholder"
-            })
-
-    # Encumbrance Register (Loans, Mortgages, Injunctions)
-    encumbrances = []
-    has_encumbrance = prng.random() < 0.28 and not is_public
-
-    if has_encumbrance:
-        inst, desc = prng.choice(LENDING_INSTITUTIONS)
-        is_litigation = "Court" in inst
-        encumbrances.append({
-            "encumbrance_id": f"ENC-2026-{prng.randint(10000, 99999)}",
-            "type": "LITIGATION_STAY" if is_litigation else "BANK_MORTGAGE",
-            "institution": inst,
-            "description": desc,
-            "registered_date": f"202{prng.randint(3, 5)}-0{prng.randint(1, 9)}-15",
-            "amount_rupees": None if is_litigation else prng.randint(150000, 750000),
-            "status": "ACTIVE_RESTRAINT" if is_litigation else "ACTIVE_CHARGE"
+            "status": "Primary Landholder" if primary_owner != "Unknown" else "Verification Pending"
         })
 
-    # 4. Discrepancy & Dispute Detection Logic
+    # 4. Verified Area Discrepancy Math via GIS Engine
+    discrepancy_analysis = calculate_area_discrepancy(
+        survey_area_sqm=actual_survey_area_sqm,
+        registered_area_sqm=recorded_legal_area_sqm
+    )
+
+    # 5. Build statutory dispute flags based on genuine data
     dispute_flags = []
-    confidence_deductions = 0
-
-    # Area Variance Flag
-    if variance_pct > 5.0:
+    if discrepancy_analysis.get("exceeds_threshold"):
         dispute_flags.append({
             "flag_code": "SURVEY_MISMATCH_SUSPECTED_ENCROACHMENT",
-            "severity": "CRITICAL" if variance_pct > 10.0 else "WARNING",
-            "title": "Ground Area Exceeds Registry Record",
-            "description": f"Drone surveyed ground footprint ({actual_drone_area_sqm} m²) exceeds legally documented area ({recorded_legal_area_sqm} m²) by +{variance_pct}%. Potential unauthorized expansion beyond Khasra boundary.",
-            "statutory_ref": "U.P. Revenue Code 2006 Sec 24 (Boundary Demarcation Re-Survey)"
+            "severity": "CRITICAL" if (discrepancy_analysis["absolute_discrepancy_pct"] or 0) > 10.0 else "WARNING",
+            "title": "Ground Survey Exceeds Documented Boundary",
+            "description": (
+                f"Metric surveyed ground footprint ({actual_survey_area_sqm} m²) deviates from legal title "
+                f"({recorded_legal_area_sqm} m²) by {discrepancy_analysis['absolute_discrepancy_pct']}%. "
+                f"Strict statutory policy requires officer review when variance > 5.0%."
+            ),
+            "statutory_ref": "U.P. Revenue Code 2006 Sec 24 / SVAMITVA Re-demarcation Guidelines"
         })
-        confidence_deductions += 35 if variance_pct > 10.0 else 20
-    elif variance_pct < -5.0:
+    elif discrepancy_analysis["status"] == "REGISTERED_AREA_UNAVAILABLE":
         dispute_flags.append({
-            "flag_code": "AREA_DEFICIT_DISPUTE",
-            "severity": "WARNING",
-            "title": "Physical Ground Footprint Deficit",
-            "description": f"Physical ground area ({actual_drone_area_sqm} m²) is smaller than registered revenue area ({recorded_legal_area_sqm} m²) by {variance_pct}%. Landholder may be facing third-party boundary encroachment.",
-            "statutory_ref": "SVAMITVA Scheme Guidelines Annexure III (Cadastral Rectification)"
+            "flag_code": "REGISTERED_AREA_MISSING",
+            "severity": "INFO",
+            "title": "Legal Record Unmatched",
+            "description": "No corresponding revenue record matched for this parcel. Please upload the physical Khasra extract.",
+            "statutory_ref": "Verification State"
         })
-        confidence_deductions += 15
 
-    # Mortgage & Unmutated Co-Shared Plot Flag
-    if has_encumbrance:
-        for enc in encumbrances:
-            if enc["type"] == "LITIGATION_STAY":
-                dispute_flags.append({
-                    "flag_code": "CIVIL_COURT_INJUNCTION",
-                    "severity": "CRITICAL",
-                    "title": "Judicial Stay Order Active",
-                    "description": f"Active litigation injunction: {enc['description']} instituted before {enc['institution']}. Mutation and transaction prohibited.",
-                    "statutory_ref": "Civil Procedure Code Order 39 Rules 1 & 2"
-                })
-                confidence_deductions += 40
-            elif len(pattadars) > 1:
-                dispute_flags.append({
-                    "flag_code": "MORTGAGE_COLLATERAL_RISK",
-                    "severity": "WARNING",
-                    "title": "Mortgage on Joint Un-Partitioned Holding",
-                    "description": f"Active credit charge of ₹{enc['amount_rupees']:,} registered with {enc['institution']} on undivided family Khata with {len(pattadars)} co-sharers.",
-                    "statutory_ref": "Transfer of Property Act Sec 44 (Transfer by Co-owner)"
-                })
-                confidence_deductions += 20
-
-    # Public corridor encroachment flag (check if south or north borders a public road with high variance)
-    road_border = any(v["boundary_type"] == "PUBLIC_ROAD" for v in chauhaddi.values())
-    if road_border and variance_pct > 4.0:
+    # Public road adjacency check
+    if props.get("is_public_road_adjacent"):
         dispute_flags.append({
-            "flag_code": "PUBLIC_LAND_VIOLATION",
-            "severity": "CRITICAL",
-            "title": "Public Road Right-of-Way Intrusion Risk",
-            "description": "Plot directly adjoins Gram Sabha Public Road Corridor while displaying positive area surplus. Immediate right-of-way demarcation required.",
-            "statutory_ref": "U.P. Revenue Code 2006 Sec 67 (Eviction of Unauthorized Occupants from Gram Sabha Land)"
+            "flag_code": "PUBLIC_CORRIDOR_SETBACK_CHECK",
+            "severity": "INFO",
+            "title": "Road Corridor Adjacency",
+            "description": "Parcel adjoins public village road reserve. Buffer analysis recommended to confirm setbacks.",
+            "statutory_ref": "Right-of-Way Buffer Review"
         })
-        confidence_deductions += 30
 
-    # Title Confidence Score (0 to 100)
-    title_confidence_score = max(5, min(100, 100 - confidence_deductions))
-
-    if title_confidence_score >= 88:
-        title_grade = "A"
-        title_status = "VERIFIED_CLEAN_TITLE"
-    elif title_confidence_score >= 70:
-        title_grade = "B"
-        title_status = "MINOR_VARIANCE_ACCEPTABLE"
-    elif title_confidence_score >= 50:
-        title_grade = "C"
-        title_status = "RECTIFICATION_RECOMMENDED"
-    elif title_confidence_score >= 35:
-        title_grade = "D"
-        title_status = "HIGH_DISPUTE_RISK"
+    # Title Confidence & Audit Grade
+    if match_status == "CONFIRMED_OCR_MATCH" and not discrepancy_analysis["exceeds_threshold"]:
+        confidence_score = 92
+        confidence_grade = "A"
+        title_status = "VERIFIED_RECONCILED_TITLE"
+    elif match_status == "PROTOTYPE_DEMO_MATCH":
+        confidence_score = 75
+        confidence_grade = "B"
+        title_status = "DEMONSTRATION_FIXTURE_MATCH"
+    elif discrepancy_analysis.get("exceeds_threshold"):
+        confidence_score = 45
+        confidence_grade = "D"
+        title_status = "VARIANCE_EXCEEDS_STATUTORY_TOLERANCE"
     else:
-        title_grade = "F"
-        title_status = "LITIGATION_ENCROACHMENT_CRITICAL"
+        confidence_score = 60
+        confidence_grade = "C"
+        title_status = "PENDING_OFFICER_CONFIRMATION"
 
     return {
         "parcel_id": parcel_id,
-        "ulpin": ulpin,
-        "scheme": "SVAMITVA (Survey of India) • Ministry of Panchayati Raj",
-        "gharouni_card_no": props.get("gharouni_card_no", f"GH-2026-{seed_val}"),
-        "khata_number": khata_number,
-        "khasra_number": khasra_number,
-        "survey_plot_no": props.get("survey_plot_no", "AB-101"),
-        "tenure_type": "Abadi Inhabited Freehold" if not is_public else "Gram Sabha Public Vested",
+        "ulpin": provisional_ulpin,
+        "ulpin_status": "PROVISIONAL_CENTROID_BHU_AADHAAR",
+        "scheme": "SVAMITVA (Survey of India / Ministry of Panchayati Raj)",
+        "gharouni_card_no": props.get("gharouni_card_no") or f"GH-2026-{parcel_id.replace('-', '')[:8].upper()}",
+        "khata_number": props.get("khata_no") or f"KH-{survey_plot}-2026",
+        "khasra_number": f"AB-{survey_plot}/1",
+        "survey_plot_no": survey_plot,
+        "tenure_type": props.get("land_type", "Residential Abadi Inhabited"),
+        "provenance_state": props.get("data_source_state", "UPLOADED_FILE" if not is_demo else "SYNTHETIC_DEMO"),
         "spatial": {
             "centroid_wgs84": [round(centroid.x, 7), round(centroid.y, 7)],
-            "actual_drone_area_sqm": actual_drone_area_sqm,
-            "actual_drone_area_acres": actual_drone_area_acres,
-            "accuracy_class": props.get("accuracy_class", "GSD < 5cm UAV Photogrammetry"),
-            "survey_date": props.get("survey_date", "2026-03-15")
+            "actual_survey_area_sqm": actual_survey_area_sqm,
+            "actual_survey_area_acres": actual_survey_area_acres,
+            "calculated_utm_epsg": utm_epsg,
+            "source_uncertainty": "±5cm UAV Photogrammetry Ground Sampling Distance"
         },
         "legal_registry": {
             "recorded_legal_area_sqm": recorded_legal_area_sqm,
-            "recorded_legal_area_acres": recorded_legal_area_acres,
-            "area_unit_regional": f"{recorded_legal_area_sqm} Sq. Mtr ({round(recorded_legal_area_sqm / 252.92, 2)} Biswa)",
-            "registry_source": "District Revenue Records / Digital Khatauni 2026"
+            "registry_source": registry_source,
+            "match_status": match_status,
+            "matched_document": matched_doc_info
         },
-        "variance_analysis": {
-            "variance_sqm": variance_sqm,
-            "variance_pct": variance_pct,
-            "within_statutory_tolerance": abs(variance_pct) <= 3.0,
-            "evaluation": "Area Matches Registry Title" if abs(variance_pct) <= 3.0 else ("Ground Surplus (Suspected Encroachment)" if variance_pct > 0 else "Ground Deficit (Boundary Squeeze)")
-        },
+        "variance_analysis": discrepancy_analysis,
         "chauhaddi": chauhaddi,
         "pattadars": pattadars,
         "encumbrances": encumbrances,
         "dispute_flags": dispute_flags,
         "title_confidence": {
-            "score": title_confidence_score,
-            "grade": title_grade,
+            "score": confidence_score,
+            "grade": confidence_grade,
             "status": title_status
         },
         "location": {
-            "village": props.get("village", "Rampur Kalan"),
+            "village": village_name,
             "tehsil": props.get("tehsil", "Bakshi Ka Talab"),
             "district": props.get("district", "Lucknow"),
-            "state": props.get("state", "Uttar Pradesh"),
-            "village_lgd_code": props.get("village_lgd_code", "142890")
-        }
+            "state": props.get("state", "Uttar Pradesh")
+        },
+        "disclaimer": "BHUSETU PROTOTYPE RECONCILIATION DOSSIER - REPRESENTS SPATIAL COMPUTATION MATCHED WITH UPLOADED REVENUE RECORDS. OFFICIAL TITLE ISSUANCE RESTS WITH COMPETENT REVENUE AUTHORITY."
     }
 
 

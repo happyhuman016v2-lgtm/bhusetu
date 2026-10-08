@@ -118,6 +118,39 @@ class SpatialIndexService:
         elapsed_ms = (time.perf_counter() - start_t) * 1000.0
         return results, elapsed_ms
 
+    def rebuild_index(self, features: List[Dict[str, Any]]):
+        """Rebuild the spatial index with updated features in-memory."""
+        start_t = time.perf_counter()
+        self.features = []
+        self.geometries = []
+
+        for feat in features:
+            try:
+                geom = shape(feat["geometry"])
+                if geom.is_valid and not geom.is_empty:
+                    self.geometries.append(geom)
+                    self.features.append(feat)
+                else:
+                    valid_geom = geom.buffer(0)
+                    if not valid_geom.is_empty:
+                        self.geometries.append(valid_geom)
+                        self.features.append(feat)
+            except Exception as e:
+                logger.debug(f"Geometry parse error: {e}")
+
+        if self.geometries:
+            self.tree = STRtree(self.geometries)
+            min_x = min(g.bounds[0] for g in self.geometries)
+            min_y = min(g.bounds[1] for g in self.geometries)
+            max_x = max(g.bounds[2] for g in self.geometries)
+            max_y = max(g.bounds[3] for g in self.geometries)
+            self.dataset_bounds = (min_x, min_y, max_x, max_y)
+            elapsed = (time.perf_counter() - start_t) * 1000.0
+            logger.info(f"Spatial STRtree index rebuilt with {len(self.geometries)} parcels in {elapsed:.2f}ms.")
+        else:
+            self.tree = None
+            self.dataset_bounds = None
+
 
 # Global singleton instance
 spatial_indexer = SpatialIndexService()

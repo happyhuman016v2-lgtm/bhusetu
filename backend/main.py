@@ -42,6 +42,8 @@ from routes.ocr_routes import router as ocr_router
 from routes.ledger_routes import router as ledger_router
 from routes.proposal_routes import router as proposal_router
 from routes.evidence_routes import router as evidence_router
+from routes.survey_routes import router as survey_router
+from services.survey_source_service import survey_source_service
 
 app.include_router(auth_router)
 app.include_router(spatial_router)
@@ -50,23 +52,22 @@ app.include_router(ledger_router)
 app.include_router(ror_router)
 app.include_router(proposal_router)
 app.include_router(evidence_router)
+app.include_router(survey_router)
 
 DATA_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "raw", "drone_parcels_raw.geojson")
 
 
 def load_parcels_geojson() -> Dict[str, Any]:
-    """Load cached drone survey GeoJSON from disk."""
-    if not os.path.exists(DATA_PATH):
-        # Auto-generate if not yet scraped
-        from scripts.scrape_drone_survey import generate_synthetic_drone_parcels
-        os.makedirs(os.path.dirname(DATA_PATH), exist_ok=True)
-        data = generate_synthetic_drone_parcels(count=72)
-        with open(DATA_PATH, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
-        return data
-
-    with open(DATA_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+    """Retrieve active survey parcels from the managed survey source service."""
+    features = survey_source_service.get_active_parcels()
+    meta = survey_source_service.metadata
+    return {
+        "type": "FeatureCollection",
+        "name": f"bhusetu_{meta.get('state', 'survey').lower()}",
+        "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:OGC:1.3:CRS84"}},
+        "metadata": meta,
+        "features": features
+    }
 
 
 class EncroachmentRequest(BaseModel):
@@ -76,11 +77,15 @@ class EncroachmentRequest(BaseModel):
 
 @app.get("/api/health")
 def health_check():
+    meta = survey_source_service.metadata
     return {
         "status": "healthy",
         "service": "BhuSetu SVAMITVA Geospatial Engine",
+        "survey_source_state": meta.get("state", "NO_SOURCE"),
+        "total_active_parcels": len(survey_source_service.get_active_parcels()),
+        "source_type": meta.get("source_type"),
         "utm_projection_support": True,
-        "crs": "EPSG:4326 <-> EPSG:32644 (UTM Zone 44N)"
+        "crs": "EPSG:4326 <-> Local Metric UTM"
     }
 
 
@@ -90,7 +95,8 @@ def get_parcels(
     limit: Optional[int] = Query(None, ge=1, le=500)
 ):
     """
-    Returns SVAMITVA drone-surveyed rural cadastral parcels as a standard GeoJSON FeatureCollection.
+    Returns active surveyed rural cadastral parcels as a standard GeoJSON FeatureCollection,
+    with explicit provenance and data-source state.
     """
     data = load_parcels_geojson()
     features = data.get("features", [])
@@ -103,15 +109,12 @@ def get_parcels(
 
     return {
         "type": "FeatureCollection",
-        "name": data.get("name", "svamitva_abadi_drone_parcels"),
+        "name": data.get("name", "active_survey_parcels"),
         "crs": data.get("crs"),
         "features": features,
         "metadata": {
-            "total_parcels": len(features),
-            "village": "Rampur Kalan (Abadi Area)",
-            "tehsil": "Bakshi Ka Talab",
-            "district": "Lucknow",
-            "scheme": "SVAMITVA (Survey of India)"
+            **data.get("metadata", {}),
+            "filtered_parcels": len(features)
         }
     }
 
