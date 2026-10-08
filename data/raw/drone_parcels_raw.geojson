@@ -1,0 +1,4134 @@
+{
+  "type": "FeatureCollection",
+  "name": "svamitva_abadi_drone_parcels",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "svamitva-101",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9434682,
+              26.9862583
+            ],
+            [
+              80.9433172,
+              26.9862873
+            ],
+            [
+              80.9430591,
+              26.9864543
+            ],
+            [
+              80.9431975,
+              26.9871933
+            ],
+            [
+              80.9436134,
+              26.9870268
+            ],
+            [
+              80.9434682,
+              26.9862583
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0101",
+        "survey_plot_no": "AB-101",
+        "owner_name": "Panchayat Bhawan / Samudayik Kendra",
+        "father_husband_name": "Gram Panchayat Rampur Kalan",
+        "area_sq_mtr": 3815.2,
+        "gharouni_card_no": "GH-2026-224906",
+        "land_type": "Community Asset",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-102",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9454971,
+              26.9865532
+            ],
+            [
+              80.94613,
+              26.9861256
+            ],
+            [
+              80.94613,
+              26.98547
+            ],
+            [
+              80.9455521,
+              26.98547
+            ],
+            [
+              80.945255,
+              26.9857687
+            ],
+            [
+              80.9451399,
+              26.9860141
+            ],
+            [
+              80.9454971,
+              26.9865532
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0102",
+        "survey_plot_no": "AB-102",
+        "owner_name": "Prathmik Vidyalaya (Primary School)",
+        "father_husband_name": "Basic Shiksha Parishad",
+        "area_sq_mtr": 8260.1,
+        "gharouni_card_no": "GH-2026-636685",
+        "land_type": "Public Institutional",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-103",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9447376,
+              26.9889
+            ],
+            [
+              80.9446424,
+              26.9885809
+            ],
+            [
+              80.9441694,
+              26.9883981
+            ],
+            [
+              80.9439136,
+              26.9889
+            ],
+            [
+              80.9447376,
+              26.9889
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0103",
+        "survey_plot_no": "AB-103",
+        "owner_name": "Smt. Kamla Devi",
+        "father_husband_name": "Late Ram Asrey",
+        "area_sq_mtr": 3020.8,
+        "gharouni_card_no": "GH-2026-207622",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-104",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9427,
+              26.9889
+            ],
+            [
+              80.9431361,
+              26.9889
+            ],
+            [
+              80.9435474,
+              26.9886182
+            ],
+            [
+              80.9434627,
+              26.9881481
+            ],
+            [
+              80.9427,
+              26.9880523
+            ],
+            [
+              80.9427,
+              26.9889
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0104",
+        "survey_plot_no": "AB-104",
+        "owner_name": "Pramod Kumar",
+        "father_husband_name": "Shri Jagdish Narayan",
+        "area_sq_mtr": 6579.7,
+        "gharouni_card_no": "GH-2026-751673",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-105",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9441694,
+              26.9883981
+            ],
+            [
+              80.9446424,
+              26.9885809
+            ],
+            [
+              80.9451651,
+              26.9880728
+            ],
+            [
+              80.945008,
+              26.98757
+            ],
+            [
+              80.9449192,
+              26.9875807
+            ],
+            [
+              80.9441189,
+              26.9882787
+            ],
+            [
+              80.9441694,
+              26.9883981
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0105",
+        "survey_plot_no": "AB-105",
+        "owner_name": "Ghanshyam Das",
+        "father_husband_name": "Shri Dwarika Prasad",
+        "area_sq_mtr": 5979.7,
+        "gharouni_card_no": "GH-2026-700381",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-106",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9440638,
+              26.9859978
+            ],
+            [
+              80.9434682,
+              26.9862583
+            ],
+            [
+              80.9436134,
+              26.9870268
+            ],
+            [
+              80.9440255,
+              26.9871945
+            ],
+            [
+              80.9441631,
+              26.9867645
+            ],
+            [
+              80.9440638,
+              26.9859978
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0106",
+        "survey_plot_no": "AB-106",
+        "owner_name": "Pramod Kumar",
+        "father_husband_name": "Shri Jagdish Narayan",
+        "area_sq_mtr": 6312.8,
+        "gharouni_card_no": "GH-2026-914295",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-107",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9441189,
+              26.9882787
+            ],
+            [
+              80.943843,
+              26.9880511
+            ],
+            [
+              80.9434627,
+              26.9881481
+            ],
+            [
+              80.9435474,
+              26.9886182
+            ],
+            [
+              80.943889,
+              26.9889
+            ],
+            [
+              80.9439136,
+              26.9889
+            ],
+            [
+              80.9441694,
+              26.9883981
+            ],
+            [
+              80.9441189,
+              26.9882787
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0107",
+        "survey_plot_no": "AB-107",
+        "owner_name": "Smt. Meena Devi",
+        "father_husband_name": "W/o Ramesh Chandra",
+        "area_sq_mtr": 4190.4,
+        "gharouni_card_no": "GH-2026-910625",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-108",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9427,
+              26.9864739
+            ],
+            [
+              80.9427,
+              26.9877934
+            ],
+            [
+              80.9431399,
+              26.9873848
+            ],
+            [
+              80.9431975,
+              26.9871933
+            ],
+            [
+              80.9430591,
+              26.9864543
+            ],
+            [
+              80.9427,
+              26.9864739
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0108",
+        "survey_plot_no": "AB-108",
+        "owner_name": "Smt. Shakuntala Devi",
+        "father_husband_name": "Late Ramcharan",
+        "area_sq_mtr": 5440.0,
+        "gharouni_card_no": "GH-2026-102657",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-109",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9440638,
+              26.9859978
+            ],
+            [
+              80.9441631,
+              26.9867645
+            ],
+            [
+              80.9452331,
+              26.9871956
+            ],
+            [
+              80.9454442,
+              26.9869856
+            ],
+            [
+              80.9455122,
+              26.9866222
+            ],
+            [
+              80.9454971,
+              26.9865532
+            ],
+            [
+              80.9451399,
+              26.9860141
+            ],
+            [
+              80.9441186,
+              26.9859264
+            ],
+            [
+              80.9440638,
+              26.9859978
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0109",
+        "survey_plot_no": "AB-109",
+        "owner_name": "Mukesh Chandra Maurya",
+        "father_husband_name": "Shri Bhagwandas",
+        "area_sq_mtr": 14285.8,
+        "gharouni_card_no": "GH-2026-401193",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-110",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9451651,
+              26.9880728
+            ],
+            [
+              80.9446424,
+              26.9885809
+            ],
+            [
+              80.9447376,
+              26.9889
+            ],
+            [
+              80.9459532,
+              26.9889
+            ],
+            [
+              80.9459733,
+              26.9886943
+            ],
+            [
+              80.9451651,
+              26.9880728
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0110",
+        "survey_plot_no": "AB-110",
+        "owner_name": "Mohammad Aslam",
+        "father_husband_name": "Shri Abdul Karim",
+        "area_sq_mtr": 7727.0,
+        "gharouni_card_no": "GH-2026-112046",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-111",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9433172,
+              26.9862873
+            ],
+            [
+              80.9428036,
+              26.98547
+            ],
+            [
+              80.9427,
+              26.98547
+            ],
+            [
+              80.9427,
+              26.9864739
+            ],
+            [
+              80.9430591,
+              26.9864543
+            ],
+            [
+              80.9433172,
+              26.9862873
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0111",
+        "survey_plot_no": "AB-111",
+        "owner_name": "Smt. Meena Devi",
+        "father_husband_name": "W/o Ramesh Chandra",
+        "area_sq_mtr": 4191.8,
+        "gharouni_card_no": "GH-2026-614102",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-112",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9431399,
+              26.9873848
+            ],
+            [
+              80.9427,
+              26.9877934
+            ],
+            [
+              80.9427,
+              26.9880523
+            ],
+            [
+              80.9434627,
+              26.9881481
+            ],
+            [
+              80.943843,
+              26.9880511
+            ],
+            [
+              80.943929,
+              26.987534
+            ],
+            [
+              80.9431399,
+              26.9873848
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0112",
+        "survey_plot_no": "AB-112",
+        "owner_name": "Gauri Shankar Tiwari",
+        "father_husband_name": "Late Kedarnath",
+        "area_sq_mtr": 7772.0,
+        "gharouni_card_no": "GH-2026-516512",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-113",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.943889,
+              26.9889
+            ],
+            [
+              80.9435474,
+              26.9886182
+            ],
+            [
+              80.9431361,
+              26.9889
+            ],
+            [
+              80.943889,
+              26.9889
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0113",
+        "survey_plot_no": "AB-113",
+        "owner_name": "Ghanshyam Das",
+        "father_husband_name": "Shri Dwarika Prasad",
+        "area_sq_mtr": 1171.5,
+        "gharouni_card_no": "GH-2026-944246",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-114",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9434682,
+              26.9862583
+            ],
+            [
+              80.9440638,
+              26.9859978
+            ],
+            [
+              80.9441186,
+              26.9859264
+            ],
+            [
+              80.9440004,
+              26.9855293
+            ],
+            [
+              80.9438851,
+              26.98547
+            ],
+            [
+              80.9428036,
+              26.98547
+            ],
+            [
+              80.9433172,
+              26.9862873
+            ],
+            [
+              80.9434682,
+              26.9862583
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0114",
+        "survey_plot_no": "AB-114",
+        "owner_name": "Ghanshyam Das",
+        "father_husband_name": "Shri Dwarika Prasad",
+        "area_sq_mtr": 7907.9,
+        "gharouni_card_no": "GH-2026-638535",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-115",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.943929,
+              26.987534
+            ],
+            [
+              80.943843,
+              26.9880511
+            ],
+            [
+              80.9441189,
+              26.9882787
+            ],
+            [
+              80.9449192,
+              26.9875807
+            ],
+            [
+              80.9440546,
+              26.9873808
+            ],
+            [
+              80.943929,
+              26.987534
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0115",
+        "survey_plot_no": "AB-115",
+        "owner_name": "Santosh Kumar Shukla",
+        "father_husband_name": "Shri Radhey Shyam",
+        "area_sq_mtr": 5788.4,
+        "gharouni_card_no": "GH-2026-456929",
+        "land_type": "Open Land",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-116",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9459733,
+              26.9886943
+            ],
+            [
+              80.94613,
+              26.9885058
+            ],
+            [
+              80.94613,
+              26.9881388
+            ],
+            [
+              80.9460415,
+              26.9874757
+            ],
+            [
+              80.9454442,
+              26.9869856
+            ],
+            [
+              80.9452331,
+              26.9871956
+            ],
+            [
+              80.945008,
+              26.98757
+            ],
+            [
+              80.9451651,
+              26.9880728
+            ],
+            [
+              80.9459733,
+              26.9886943
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0116",
+        "survey_plot_no": "AB-116",
+        "owner_name": "Rajendra Pratap Singh",
+        "father_husband_name": "Shri Vikram Singh",
+        "area_sq_mtr": 13068.8,
+        "gharouni_card_no": "GH-2026-406311",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-117",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9452331,
+              26.9871956
+            ],
+            [
+              80.9441631,
+              26.9867645
+            ],
+            [
+              80.9440255,
+              26.9871945
+            ],
+            [
+              80.9440546,
+              26.9873808
+            ],
+            [
+              80.9449192,
+              26.9875807
+            ],
+            [
+              80.945008,
+              26.98757
+            ],
+            [
+              80.9452331,
+              26.9871956
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0117",
+        "survey_plot_no": "AB-117",
+        "owner_name": "Smt. Kamla Devi",
+        "father_husband_name": "Late Ram Asrey",
+        "area_sq_mtr": 6465.1,
+        "gharouni_card_no": "GH-2026-776116",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-118",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9436134,
+              26.9870268
+            ],
+            [
+              80.9431975,
+              26.9871933
+            ],
+            [
+              80.9431399,
+              26.9873848
+            ],
+            [
+              80.943929,
+              26.987534
+            ],
+            [
+              80.9440546,
+              26.9873808
+            ],
+            [
+              80.9440255,
+              26.9871945
+            ],
+            [
+              80.9436134,
+              26.9870268
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0118",
+        "survey_plot_no": "AB-118",
+        "owner_name": "Ghanshyam Das",
+        "father_husband_name": "Shri Dwarika Prasad",
+        "area_sq_mtr": 3352.3,
+        "gharouni_card_no": "GH-2026-424008",
+        "land_type": "Open Land",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-119",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.94882,
+              26.9867521
+            ],
+            [
+              80.9476434,
+              26.9871442
+            ],
+            [
+              80.9480847,
+              26.9876642
+            ],
+            [
+              80.9488986,
+              26.9869131
+            ],
+            [
+              80.94882,
+              26.9867521
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0119",
+        "survey_plot_no": "AB-119",
+        "owner_name": "Smt. Sunita Yadav",
+        "father_husband_name": "W/o Surendra Yadav",
+        "area_sq_mtr": 5383.1,
+        "gharouni_card_no": "GH-2026-486761",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-120",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9466698,
+              26.9873203
+            ],
+            [
+              80.9470266,
+              26.9875986
+            ],
+            [
+              80.9476225,
+              26.9871327
+            ],
+            [
+              80.9475016,
+              26.9866508
+            ],
+            [
+              80.9466576,
+              26.9869509
+            ],
+            [
+              80.9466698,
+              26.9873203
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0120",
+        "survey_plot_no": "AB-120",
+        "owner_name": "Smt. Kamla Devi",
+        "father_husband_name": "Late Ram Asrey",
+        "area_sq_mtr": 6235.3,
+        "gharouni_card_no": "GH-2026-195089",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-121",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9487713,
+              26.986406
+            ],
+            [
+              80.94882,
+              26.9867521
+            ],
+            [
+              80.9488986,
+              26.9869131
+            ],
+            [
+              80.9490254,
+              26.9870313
+            ],
+            [
+              80.9497,
+              26.9867802
+            ],
+            [
+              80.9497,
+              26.9860464
+            ],
+            [
+              80.94878,
+              26.9863918
+            ],
+            [
+              80.9487713,
+              26.986406
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0121",
+        "survey_plot_no": "AB-121",
+        "owner_name": "Smt. Shakuntala Devi",
+        "father_husband_name": "Late Ramcharan",
+        "area_sq_mtr": 6878.6,
+        "gharouni_card_no": "GH-2026-681381",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-122",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9464949,
+              26.9867192
+            ],
+            [
+              80.9467237,
+              26.9863589
+            ],
+            [
+              80.9465893,
+              26.9858153
+            ],
+            [
+              80.94627,
+              26.986031
+            ],
+            [
+              80.94627,
+              26.986697
+            ],
+            [
+              80.9464949,
+              26.9867192
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0122",
+        "survey_plot_no": "AB-122",
+        "owner_name": "Pramod Kumar",
+        "father_husband_name": "Shri Jagdish Narayan",
+        "area_sq_mtr": 3262.3,
+        "gharouni_card_no": "GH-2026-546109",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-123",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9475054,
+              26.9866
+            ],
+            [
+              80.9477123,
+              26.9861979
+            ],
+            [
+              80.947621,
+              26.9858729
+            ],
+            [
+              80.9471848,
+              26.9854727
+            ],
+            [
+              80.9466247,
+              26.9857231
+            ],
+            [
+              80.9465893,
+              26.9858153
+            ],
+            [
+              80.9467237,
+              26.9863589
+            ],
+            [
+              80.9475054,
+              26.9866
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0123",
+        "survey_plot_no": "AB-123",
+        "owner_name": "Smt. Sunita Yadav",
+        "father_husband_name": "W/o Surendra Yadav",
+        "area_sq_mtr": 9297.2,
+        "gharouni_card_no": "GH-2026-729318",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-124",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9481074,
+              26.9877706
+            ],
+            [
+              80.9479134,
+              26.9884922
+            ],
+            [
+              80.9480713,
+              26.9889
+            ],
+            [
+              80.949476,
+              26.9889
+            ],
+            [
+              80.9491185,
+              26.987789
+            ],
+            [
+              80.9481074,
+              26.9877706
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0124",
+        "survey_plot_no": "AB-124",
+        "owner_name": "Smt. Sunita Yadav",
+        "father_husband_name": "W/o Surendra Yadav",
+        "area_sq_mtr": 15991.7,
+        "gharouni_card_no": "GH-2026-650138",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-125",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9497,
+              26.9860464
+            ],
+            [
+              80.9497,
+              26.98547
+            ],
+            [
+              80.9487369,
+              26.98547
+            ],
+            [
+              80.94878,
+              26.9863918
+            ],
+            [
+              80.9497,
+              26.9860464
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0125",
+        "survey_plot_no": "AB-125",
+        "owner_name": "Mukesh Chandra Maurya",
+        "father_husband_name": "Shri Bhagwandas",
+        "area_sq_mtr": 7829.8,
+        "gharouni_card_no": "GH-2026-691396",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-126",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.94627,
+              26.988419
+            ],
+            [
+              80.94627,
+              26.9889
+            ],
+            [
+              80.9471836,
+              26.9889
+            ],
+            [
+              80.9465886,
+              26.9883015
+            ],
+            [
+              80.94627,
+              26.988419
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0126",
+        "survey_plot_no": "AB-126",
+        "owner_name": "Ram Prasad",
+        "father_husband_name": "Shri Shivnath",
+        "area_sq_mtr": 3865.2,
+        "gharouni_card_no": "GH-2026-637866",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-127",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9455122,
+              26.9866222
+            ],
+            [
+              80.9454442,
+              26.9869856
+            ],
+            [
+              80.9460415,
+              26.9874757
+            ],
+            [
+              80.94613,
+              26.9874538
+            ],
+            [
+              80.94613,
+              26.9866832
+            ],
+            [
+              80.9455122,
+              26.9866222
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0127",
+        "survey_plot_no": "AB-127",
+        "owner_name": "Rajendra Pratap Singh",
+        "father_husband_name": "Shri Vikram Singh",
+        "area_sq_mtr": 4492.2,
+        "gharouni_card_no": "GH-2026-703472",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-128",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.94627,
+              26.9874192
+            ],
+            [
+              80.94627,
+              26.988419
+            ],
+            [
+              80.9465886,
+              26.9883015
+            ],
+            [
+              80.9470141,
+              26.9879981
+            ],
+            [
+              80.9470266,
+              26.9875986
+            ],
+            [
+              80.9466698,
+              26.9873203
+            ],
+            [
+              80.94627,
+              26.9874192
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0128",
+        "survey_plot_no": "AB-128",
+        "owner_name": "Ghanshyam Das",
+        "father_husband_name": "Shri Dwarika Prasad",
+        "area_sq_mtr": 6855.9,
+        "gharouni_card_no": "GH-2026-957873",
+        "land_type": "Open Land",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-129",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9497,
+              26.9867802
+            ],
+            [
+              80.9490254,
+              26.9870313
+            ],
+            [
+              80.9491691,
+              26.9873762
+            ],
+            [
+              80.9497,
+              26.9873729
+            ],
+            [
+              80.9497,
+              26.9867802
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0129",
+        "survey_plot_no": "AB-129",
+        "owner_name": "Smt. Shakuntala Devi",
+        "father_husband_name": "Late Ramcharan",
+        "area_sq_mtr": 3221.3,
+        "gharouni_card_no": "GH-2026-648632",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-130",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9470141,
+              26.9879981
+            ],
+            [
+              80.9479134,
+              26.9884922
+            ],
+            [
+              80.9481074,
+              26.9877706
+            ],
+            [
+              80.9480847,
+              26.9876642
+            ],
+            [
+              80.9476434,
+              26.9871442
+            ],
+            [
+              80.9476225,
+              26.9871327
+            ],
+            [
+              80.9470266,
+              26.9875986
+            ],
+            [
+              80.9470141,
+              26.9879981
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0130",
+        "survey_plot_no": "AB-130",
+        "owner_name": "Mukesh Chandra Maurya",
+        "father_husband_name": "Shri Bhagwandas",
+        "area_sq_mtr": 10091.4,
+        "gharouni_card_no": "GH-2026-852151",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-131",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9491185,
+              26.987789
+            ],
+            [
+              80.9491691,
+              26.9873762
+            ],
+            [
+              80.9490254,
+              26.9870313
+            ],
+            [
+              80.9488986,
+              26.9869131
+            ],
+            [
+              80.9480847,
+              26.9876642
+            ],
+            [
+              80.9481074,
+              26.9877706
+            ],
+            [
+              80.9491185,
+              26.987789
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0131",
+        "survey_plot_no": "AB-131",
+        "owner_name": "Smt. Meena Devi",
+        "father_husband_name": "W/o Ramesh Chandra",
+        "area_sq_mtr": 6333.5,
+        "gharouni_card_no": "GH-2026-249330",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-132",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9487713,
+              26.986406
+            ],
+            [
+              80.94878,
+              26.9863918
+            ],
+            [
+              80.9487369,
+              26.98547
+            ],
+            [
+              80.9481948,
+              26.98547
+            ],
+            [
+              80.947621,
+              26.9858729
+            ],
+            [
+              80.9477123,
+              26.9861979
+            ],
+            [
+              80.9487713,
+              26.986406
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0132",
+        "survey_plot_no": "AB-132",
+        "owner_name": "Mohammad Aslam",
+        "father_husband_name": "Shri Abdul Karim",
+        "area_sq_mtr": 8892.6,
+        "gharouni_card_no": "GH-2026-990900",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-133",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9497,
+              26.9889
+            ],
+            [
+              80.9497,
+              26.9873729
+            ],
+            [
+              80.9491691,
+              26.9873762
+            ],
+            [
+              80.9491185,
+              26.987789
+            ],
+            [
+              80.949476,
+              26.9889
+            ],
+            [
+              80.9497,
+              26.9889
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0133",
+        "survey_plot_no": "AB-133",
+        "owner_name": "Mukesh Chandra Maurya",
+        "father_husband_name": "Shri Bhagwandas",
+        "area_sq_mtr": 7486.3,
+        "gharouni_card_no": "GH-2026-834744",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-134",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9470141,
+              26.9879981
+            ],
+            [
+              80.9465886,
+              26.9883015
+            ],
+            [
+              80.9471836,
+              26.9889
+            ],
+            [
+              80.9480713,
+              26.9889
+            ],
+            [
+              80.9479134,
+              26.9884922
+            ],
+            [
+              80.9470141,
+              26.9879981
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0134",
+        "survey_plot_no": "AB-134",
+        "owner_name": "Santosh Kumar Shukla",
+        "father_husband_name": "Shri Radhey Shyam",
+        "area_sq_mtr": 8417.6,
+        "gharouni_card_no": "GH-2026-849231",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-135",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9467237,
+              26.9863589
+            ],
+            [
+              80.9464949,
+              26.9867192
+            ],
+            [
+              80.9466576,
+              26.9869509
+            ],
+            [
+              80.9475016,
+              26.9866508
+            ],
+            [
+              80.9475054,
+              26.9866
+            ],
+            [
+              80.9467237,
+              26.9863589
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0135",
+        "survey_plot_no": "AB-135",
+        "owner_name": "Mohammad Aslam",
+        "father_husband_name": "Shri Abdul Karim",
+        "area_sq_mtr": 3490.0,
+        "gharouni_card_no": "GH-2026-363199",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-136",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9476434,
+              26.9871442
+            ],
+            [
+              80.94882,
+              26.9867521
+            ],
+            [
+              80.9487713,
+              26.986406
+            ],
+            [
+              80.9477123,
+              26.9861979
+            ],
+            [
+              80.9475054,
+              26.9866
+            ],
+            [
+              80.9475016,
+              26.9866508
+            ],
+            [
+              80.9476225,
+              26.9871327
+            ],
+            [
+              80.9476434,
+              26.9871442
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0136",
+        "survey_plot_no": "AB-136",
+        "owner_name": "Mohammad Aslam",
+        "father_husband_name": "Shri Abdul Karim",
+        "area_sq_mtr": 8992.4,
+        "gharouni_card_no": "GH-2026-422570",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-137",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.945079,
+              26.9830532
+            ],
+            [
+              80.9449707,
+              26.982896
+            ],
+            [
+              80.9444888,
+              26.9826477
+            ],
+            [
+              80.9436263,
+              26.9832839
+            ],
+            [
+              80.9443389,
+              26.9840264
+            ],
+            [
+              80.9451435,
+              26.983476
+            ],
+            [
+              80.9451169,
+              26.9831517
+            ],
+            [
+              80.945079,
+              26.9830532
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0137",
+        "survey_plot_no": "AB-137",
+        "owner_name": "Pramod Kumar",
+        "father_husband_name": "Shri Jagdish Narayan",
+        "area_sq_mtr": 13265.2,
+        "gharouni_card_no": "GH-2026-626279",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-138",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9427,
+              26.9835695
+            ],
+            [
+              80.9427,
+              26.984236
+            ],
+            [
+              80.9437167,
+              26.9845439
+            ],
+            [
+              80.9440752,
+              26.9845157
+            ],
+            [
+              80.9429258,
+              26.9835024
+            ],
+            [
+              80.9427,
+              26.9835695
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0138",
+        "survey_plot_no": "AB-138",
+        "owner_name": "Vijay Kumar Verma",
+        "father_husband_name": "Shri Lalta Prasad",
+        "area_sq_mtr": 7517.7,
+        "gharouni_card_no": "GH-2026-521473",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-139",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9433547,
+              26.983307
+            ],
+            [
+              80.9433688,
+              26.9819
+            ],
+            [
+              80.9427,
+              26.9819
+            ],
+            [
+              80.9427,
+              26.9835695
+            ],
+            [
+              80.9429258,
+              26.9835024
+            ],
+            [
+              80.9433547,
+              26.983307
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0139",
+        "survey_plot_no": "AB-139",
+        "owner_name": "Ram Prasad",
+        "father_husband_name": "Shri Shivnath",
+        "area_sq_mtr": 11315.5,
+        "gharouni_card_no": "GH-2026-972249",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-140",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9453368,
+              26.983968
+            ],
+            [
+              80.9450379,
+              26.9845802
+            ],
+            [
+              80.9458819,
+              26.9849877
+            ],
+            [
+              80.94613,
+              26.9845922
+            ],
+            [
+              80.94613,
+              26.9845723
+            ],
+            [
+              80.9453368,
+              26.983968
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0140",
+        "survey_plot_no": "AB-140",
+        "owner_name": "Smt. Kamla Devi",
+        "father_husband_name": "Late Ram Asrey",
+        "area_sq_mtr": 6199.8,
+        "gharouni_card_no": "GH-2026-257122",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-141",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9440752,
+              26.9845157
+            ],
+            [
+              80.9437167,
+              26.9845439
+            ],
+            [
+              80.9432716,
+              26.9851546
+            ],
+            [
+              80.9436128,
+              26.98533
+            ],
+            [
+              80.9440722,
+              26.98533
+            ],
+            [
+              80.9443216,
+              26.9845976
+            ],
+            [
+              80.9443032,
+              26.9845633
+            ],
+            [
+              80.9440752,
+              26.9845157
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0141",
+        "survey_plot_no": "AB-141",
+        "owner_name": "Mukesh Chandra Maurya",
+        "father_husband_name": "Shri Bhagwandas",
+        "area_sq_mtr": 6334.5,
+        "gharouni_card_no": "GH-2026-580486",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-142",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9448263,
+              26.9846657
+            ],
+            [
+              80.9449799,
+              26.9851175
+            ],
+            [
+              80.9450697,
+              26.98533
+            ],
+            [
+              80.9456914,
+              26.98533
+            ],
+            [
+              80.9458687,
+              26.9851518
+            ],
+            [
+              80.9458819,
+              26.9849877
+            ],
+            [
+              80.9450379,
+              26.9845802
+            ],
+            [
+              80.9448263,
+              26.9846657
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0142",
+        "survey_plot_no": "AB-142",
+        "owner_name": "Vijay Kumar Verma",
+        "father_husband_name": "Shri Lalta Prasad",
+        "area_sq_mtr": 5680.1,
+        "gharouni_card_no": "GH-2026-477420",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-143",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9436263,
+              26.9832839
+            ],
+            [
+              80.9444888,
+              26.9826477
+            ],
+            [
+              80.9442994,
+              26.9819
+            ],
+            [
+              80.9433688,
+              26.9819
+            ],
+            [
+              80.9433547,
+              26.983307
+            ],
+            [
+              80.9436263,
+              26.9832839
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0143",
+        "survey_plot_no": "AB-143",
+        "owner_name": "Santosh Kumar Shukla",
+        "father_husband_name": "Shri Radhey Shyam",
+        "area_sq_mtr": 13445.1,
+        "gharouni_card_no": "GH-2026-826293",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-144",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9427,
+              26.9849889
+            ],
+            [
+              80.9432716,
+              26.9851546
+            ],
+            [
+              80.9437167,
+              26.9845439
+            ],
+            [
+              80.9427,
+              26.984236
+            ],
+            [
+              80.9427,
+              26.9849889
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0144",
+        "survey_plot_no": "AB-144",
+        "owner_name": "Pramod Kumar",
+        "father_husband_name": "Shri Jagdish Narayan",
+        "area_sq_mtr": 6561.2,
+        "gharouni_card_no": "GH-2026-903946",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-145",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.945429,
+              26.9819
+            ],
+            [
+              80.9452648,
+              26.9825398
+            ],
+            [
+              80.94613,
+              26.9822389
+            ],
+            [
+              80.94613,
+              26.9819
+            ],
+            [
+              80.945429,
+              26.9819
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0145",
+        "survey_plot_no": "AB-145",
+        "owner_name": "Ram Prasad",
+        "father_husband_name": "Shri Shivnath",
+        "area_sq_mtr": 4095.4,
+        "gharouni_card_no": "GH-2026-555322",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-146",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9440722,
+              26.98533
+            ],
+            [
+              80.944265,
+              26.98533
+            ],
+            [
+              80.9449799,
+              26.9851175
+            ],
+            [
+              80.9448263,
+              26.9846657
+            ],
+            [
+              80.9443216,
+              26.9845976
+            ],
+            [
+              80.9440722,
+              26.98533
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0146",
+        "survey_plot_no": "AB-146",
+        "owner_name": "Mukesh Chandra Maurya",
+        "father_husband_name": "Shri Bhagwandas",
+        "area_sq_mtr": 4805.5,
+        "gharouni_card_no": "GH-2026-971789",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-147",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.945429,
+              26.9819
+            ],
+            [
+              80.9442994,
+              26.9819
+            ],
+            [
+              80.9444888,
+              26.9826477
+            ],
+            [
+              80.9449707,
+              26.982896
+            ],
+            [
+              80.9452648,
+              26.9825398
+            ],
+            [
+              80.945429,
+              26.9819
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0147",
+        "survey_plot_no": "AB-147",
+        "owner_name": "Ghanshyam Das",
+        "father_husband_name": "Shri Dwarika Prasad",
+        "area_sq_mtr": 8657.9,
+        "gharouni_card_no": "GH-2026-951340",
+        "land_type": "Open Land",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-148",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9440004,
+              26.9855293
+            ],
+            [
+              80.9441186,
+              26.9859264
+            ],
+            [
+              80.9451399,
+              26.9860141
+            ],
+            [
+              80.945255,
+              26.9857687
+            ],
+            [
+              80.9451288,
+              26.98547
+            ],
+            [
+              80.9440223,
+              26.98547
+            ],
+            [
+              80.9440004,
+              26.9855293
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0148",
+        "survey_plot_no": "AB-148",
+        "owner_name": "Santosh Kumar Shukla",
+        "father_husband_name": "Shri Radhey Shyam",
+        "area_sq_mtr": 6298.8,
+        "gharouni_card_no": "GH-2026-851324",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-149",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9452814,
+              26.9836526
+            ],
+            [
+              80.9453368,
+              26.983968
+            ],
+            [
+              80.94613,
+              26.9845723
+            ],
+            [
+              80.94613,
+              26.983686
+            ],
+            [
+              80.9452814,
+              26.9836526
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0149",
+        "survey_plot_no": "AB-149",
+        "owner_name": "Rajendra Pratap Singh",
+        "father_husband_name": "Shri Vikram Singh",
+        "area_sq_mtr": 5349.2,
+        "gharouni_card_no": "GH-2026-371404",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-150",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9452648,
+              26.9825398
+            ],
+            [
+              80.9449707,
+              26.982896
+            ],
+            [
+              80.945079,
+              26.9830532
+            ],
+            [
+              80.94613,
+              26.9826215
+            ],
+            [
+              80.94613,
+              26.9822389
+            ],
+            [
+              80.9452648,
+              26.9825398
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0150",
+        "survey_plot_no": "AB-150",
+        "owner_name": "Mukesh Chandra Maurya",
+        "father_husband_name": "Shri Bhagwandas",
+        "area_sq_mtr": 4832.4,
+        "gharouni_card_no": "GH-2026-546459",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-151",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.945079,
+              26.9830532
+            ],
+            [
+              80.9451169,
+              26.9831517
+            ],
+            [
+              80.94613,
+              26.9831505
+            ],
+            [
+              80.94613,
+              26.9826215
+            ],
+            [
+              80.945079,
+              26.9830532
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0151",
+        "survey_plot_no": "AB-151",
+        "owner_name": "Mukesh Chandra Maurya",
+        "father_husband_name": "Shri Bhagwandas",
+        "area_sq_mtr": 3621.1,
+        "gharouni_card_no": "GH-2026-167418",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-152",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.94613,
+              26.983686
+            ],
+            [
+              80.94613,
+              26.9831505
+            ],
+            [
+              80.9451169,
+              26.9831517
+            ],
+            [
+              80.9451435,
+              26.983476
+            ],
+            [
+              80.9452814,
+              26.9836526
+            ],
+            [
+              80.94613,
+              26.983686
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0152",
+        "survey_plot_no": "AB-152",
+        "owner_name": "Ghanshyam Das",
+        "father_husband_name": "Shri Dwarika Prasad",
+        "area_sq_mtr": 5533.1,
+        "gharouni_card_no": "GH-2026-488108",
+        "land_type": "Open Land",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-153",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9436263,
+              26.9832839
+            ],
+            [
+              80.9433547,
+              26.983307
+            ],
+            [
+              80.9429258,
+              26.9835024
+            ],
+            [
+              80.9440752,
+              26.9845157
+            ],
+            [
+              80.9443032,
+              26.9845633
+            ],
+            [
+              80.9443389,
+              26.9840264
+            ],
+            [
+              80.9436263,
+              26.9832839
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0153",
+        "survey_plot_no": "AB-153",
+        "owner_name": "Mukesh Chandra Maurya",
+        "father_husband_name": "Shri Bhagwandas",
+        "area_sq_mtr": 9235.8,
+        "gharouni_card_no": "GH-2026-998249",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-154",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9452814,
+              26.9836526
+            ],
+            [
+              80.9451435,
+              26.983476
+            ],
+            [
+              80.9443389,
+              26.9840264
+            ],
+            [
+              80.9443032,
+              26.9845633
+            ],
+            [
+              80.9443216,
+              26.9845976
+            ],
+            [
+              80.9448263,
+              26.9846657
+            ],
+            [
+              80.9450379,
+              26.9845802
+            ],
+            [
+              80.9453368,
+              26.983968
+            ],
+            [
+              80.9452814,
+              26.9836526
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0154",
+        "survey_plot_no": "AB-154",
+        "owner_name": "Mukesh Chandra Maurya",
+        "father_husband_name": "Shri Bhagwandas",
+        "area_sq_mtr": 8872.6,
+        "gharouni_card_no": "GH-2026-114714",
+        "land_type": "Open Land",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-155",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9484828,
+              26.9832037
+            ],
+            [
+              80.9479777,
+              26.9829702
+            ],
+            [
+              80.9478126,
+              26.9830741
+            ],
+            [
+              80.9478027,
+              26.9831007
+            ],
+            [
+              80.9484868,
+              26.9836965
+            ],
+            [
+              80.9488457,
+              26.9833788
+            ],
+            [
+              80.9484828,
+              26.9832037
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0155",
+        "survey_plot_no": "AB-155",
+        "owner_name": "Smt. Nirmala Soni",
+        "father_husband_name": "W/o Ram Kishan",
+        "area_sq_mtr": 3440.0,
+        "gharouni_card_no": "GH-2026-708845",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-156",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9493929,
+              26.9833467
+            ],
+            [
+              80.9490042,
+              26.9841459
+            ],
+            [
+              80.9492458,
+              26.9844907
+            ],
+            [
+              80.9493499,
+              26.9845109
+            ],
+            [
+              80.9497,
+              26.9836057
+            ],
+            [
+              80.9497,
+              26.9831762
+            ],
+            [
+              80.9496765,
+              26.9831751
+            ],
+            [
+              80.9493929,
+              26.9833467
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0156",
+        "survey_plot_no": "AB-156",
+        "owner_name": "Smt. Meena Devi",
+        "father_husband_name": "W/o Ramesh Chandra",
+        "area_sq_mtr": 5267.9,
+        "gharouni_card_no": "GH-2026-187100",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-157",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9469209,
+              26.9843752
+            ],
+            [
+              80.9472459,
+              26.9848549
+            ],
+            [
+              80.9482878,
+              26.9847026
+            ],
+            [
+              80.948356,
+              26.9844069
+            ],
+            [
+              80.9482046,
+              26.9840735
+            ],
+            [
+              80.9475986,
+              26.9836433
+            ],
+            [
+              80.9469209,
+              26.9843752
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0157",
+        "survey_plot_no": "AB-157",
+        "owner_name": "Ram Prasad",
+        "father_husband_name": "Shri Shivnath",
+        "area_sq_mtr": 12061.9,
+        "gharouni_card_no": "GH-2026-359876",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-158",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9496765,
+              26.9831751
+            ],
+            [
+              80.9497,
+              26.9831762
+            ],
+            [
+              80.9497,
+              26.9819
+            ],
+            [
+              80.9485336,
+              26.9819
+            ],
+            [
+              80.9488713,
+              26.982281
+            ],
+            [
+              80.9496765,
+              26.9831751
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0158",
+        "survey_plot_no": "AB-158",
+        "owner_name": "Vijay Kumar Verma",
+        "father_husband_name": "Shri Lalta Prasad",
+        "area_sq_mtr": 8404.3,
+        "gharouni_card_no": "GH-2026-888377",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-159",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9478126,
+              26.9830741
+            ],
+            [
+              80.9479777,
+              26.9829702
+            ],
+            [
+              80.9485169,
+              26.9819
+            ],
+            [
+              80.9473489,
+              26.9819
+            ],
+            [
+              80.9473908,
+              26.9827281
+            ],
+            [
+              80.9478126,
+              26.9830741
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0159",
+        "survey_plot_no": "AB-159",
+        "owner_name": "Gauri Shankar Tiwari",
+        "father_husband_name": "Late Kedarnath",
+        "area_sq_mtr": 10086.7,
+        "gharouni_card_no": "GH-2026-800949",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-160",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9497,
+              26.9846184
+            ],
+            [
+              80.9497,
+              26.9836057
+            ],
+            [
+              80.9493499,
+              26.9845109
+            ],
+            [
+              80.9497,
+              26.9846184
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0160",
+        "survey_plot_no": "AB-160",
+        "owner_name": "Mohammad Aslam",
+        "father_husband_name": "Shri Abdul Karim",
+        "area_sq_mtr": 1957.6,
+        "gharouni_card_no": "GH-2026-262278",
+        "land_type": "Open Land",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-161",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.948356,
+              26.9844069
+            ],
+            [
+              80.9490042,
+              26.9841459
+            ],
+            [
+              80.9493929,
+              26.9833467
+            ],
+            [
+              80.9488457,
+              26.9833788
+            ],
+            [
+              80.9484868,
+              26.9836965
+            ],
+            [
+              80.9482046,
+              26.9840735
+            ],
+            [
+              80.948356,
+              26.9844069
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0161",
+        "survey_plot_no": "AB-161",
+        "owner_name": "Smt. Nirmala Soni",
+        "father_husband_name": "W/o Ram Kishan",
+        "area_sq_mtr": 7332.6,
+        "gharouni_card_no": "GH-2026-711388",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-162",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9472459,
+              26.9848549
+            ],
+            [
+              80.9469209,
+              26.9843752
+            ],
+            [
+              80.9466012,
+              26.9842941
+            ],
+            [
+              80.94627,
+              26.9844978
+            ],
+            [
+              80.94627,
+              26.98533
+            ],
+            [
+              80.9471989,
+              26.98533
+            ],
+            [
+              80.9472459,
+              26.9848549
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0162",
+        "survey_plot_no": "AB-162",
+        "owner_name": "Rajendra Pratap Singh",
+        "father_husband_name": "Shri Vikram Singh",
+        "area_sq_mtr": 9372.8,
+        "gharouni_card_no": "GH-2026-615887",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-163",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9492458,
+              26.9844907
+            ],
+            [
+              80.9488021,
+              26.9852393
+            ],
+            [
+              80.9496279,
+              26.98533
+            ],
+            [
+              80.9497,
+              26.98533
+            ],
+            [
+              80.9497,
+              26.9846184
+            ],
+            [
+              80.9493499,
+              26.9845109
+            ],
+            [
+              80.9492458,
+              26.9844907
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0163",
+        "survey_plot_no": "AB-163",
+        "owner_name": "Smt. Kamla Devi",
+        "father_husband_name": "Late Ram Asrey",
+        "area_sq_mtr": 5777.0,
+        "gharouni_card_no": "GH-2026-672316",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-164",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9473908,
+              26.9827281
+            ],
+            [
+              80.9472103,
+              26.9827446
+            ],
+            [
+              80.9468338,
+              26.9832087
+            ],
+            [
+              80.9476008,
+              26.9835347
+            ],
+            [
+              80.9478027,
+              26.9831007
+            ],
+            [
+              80.9478126,
+              26.9830741
+            ],
+            [
+              80.9473908,
+              26.9827281
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0164",
+        "survey_plot_no": "AB-164",
+        "owner_name": "Ghanshyam Das",
+        "father_husband_name": "Shri Dwarika Prasad",
+        "area_sq_mtr": 4949.4,
+        "gharouni_card_no": "GH-2026-237590",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-165",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9485967,
+              26.9851878
+            ],
+            [
+              80.9482878,
+              26.9847026
+            ],
+            [
+              80.9472459,
+              26.9848549
+            ],
+            [
+              80.9471989,
+              26.98533
+            ],
+            [
+              80.9483942,
+              26.98533
+            ],
+            [
+              80.9485967,
+              26.9851878
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0165",
+        "survey_plot_no": "AB-165",
+        "owner_name": "Smt. Sunita Yadav",
+        "father_husband_name": "W/o Surendra Yadav",
+        "area_sq_mtr": 7619.4,
+        "gharouni_card_no": "GH-2026-629238",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-166",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9468338,
+              26.9832087
+            ],
+            [
+              80.9464401,
+              26.9832173
+            ],
+            [
+              80.9463631,
+              26.9836952
+            ],
+            [
+              80.9466012,
+              26.9842941
+            ],
+            [
+              80.9469209,
+              26.9843752
+            ],
+            [
+              80.9475986,
+              26.9836433
+            ],
+            [
+              80.9476008,
+              26.9835347
+            ],
+            [
+              80.9468338,
+              26.9832087
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0166",
+        "survey_plot_no": "AB-166",
+        "owner_name": "Rajendra Pratap Singh",
+        "father_husband_name": "Shri Vikram Singh",
+        "area_sq_mtr": 10432.2,
+        "gharouni_card_no": "GH-2026-801030",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-167",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9485967,
+              26.9851878
+            ],
+            [
+              80.9487269,
+              26.985255
+            ],
+            [
+              80.9488021,
+              26.9852393
+            ],
+            [
+              80.9492458,
+              26.9844907
+            ],
+            [
+              80.9490042,
+              26.9841459
+            ],
+            [
+              80.948356,
+              26.9844069
+            ],
+            [
+              80.9482878,
+              26.9847026
+            ],
+            [
+              80.9485967,
+              26.9851878
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0167",
+        "survey_plot_no": "AB-167",
+        "owner_name": "Smt. Kamla Devi",
+        "father_husband_name": "Late Ram Asrey",
+        "area_sq_mtr": 7008.8,
+        "gharouni_card_no": "GH-2026-921494",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-168",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9476008,
+              26.9835347
+            ],
+            [
+              80.9475986,
+              26.9836433
+            ],
+            [
+              80.9482046,
+              26.9840735
+            ],
+            [
+              80.9484868,
+              26.9836965
+            ],
+            [
+              80.9478027,
+              26.9831007
+            ],
+            [
+              80.9476008,
+              26.9835347
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0168",
+        "survey_plot_no": "AB-168",
+        "owner_name": "Smt. Sunita Yadav",
+        "father_husband_name": "W/o Surendra Yadav",
+        "area_sq_mtr": 4768.5,
+        "gharouni_card_no": "GH-2026-420868",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-169",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9484828,
+              26.9832037
+            ],
+            [
+              80.9488713,
+              26.982281
+            ],
+            [
+              80.9485336,
+              26.9819
+            ],
+            [
+              80.9485169,
+              26.9819
+            ],
+            [
+              80.9479777,
+              26.9829702
+            ],
+            [
+              80.9484828,
+              26.9832037
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0169",
+        "survey_plot_no": "AB-169",
+        "owner_name": "Pramod Kumar",
+        "father_husband_name": "Shri Jagdish Narayan",
+        "area_sq_mtr": 6337.8,
+        "gharouni_card_no": "GH-2026-947244",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-170",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9468338,
+              26.9832087
+            ],
+            [
+              80.9472103,
+              26.9827446
+            ],
+            [
+              80.9463975,
+              26.9824135
+            ],
+            [
+              80.9463719,
+              26.9825222
+            ],
+            [
+              80.9464084,
+              26.9831502
+            ],
+            [
+              80.9464401,
+              26.9832173
+            ],
+            [
+              80.9468338,
+              26.9832087
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0170",
+        "survey_plot_no": "AB-170",
+        "owner_name": "Smt. Shakuntala Devi",
+        "father_husband_name": "Late Ramcharan",
+        "area_sq_mtr": 4756.0,
+        "gharouni_card_no": "GH-2026-306251",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-171",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9496765,
+              26.9831751
+            ],
+            [
+              80.9488713,
+              26.982281
+            ],
+            [
+              80.9484828,
+              26.9832037
+            ],
+            [
+              80.9488457,
+              26.9833788
+            ],
+            [
+              80.9493929,
+              26.9833467
+            ],
+            [
+              80.9496765,
+              26.9831751
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0171",
+        "survey_plot_no": "AB-171",
+        "owner_name": "Ram Prasad",
+        "father_husband_name": "Shri Shivnath",
+        "area_sq_mtr": 7699.7,
+        "gharouni_card_no": "GH-2026-508260",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-172",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9464126,
+              26.9819
+            ],
+            [
+              80.9463723,
+              26.9821546
+            ],
+            [
+              80.9463975,
+              26.9824135
+            ],
+            [
+              80.9472103,
+              26.9827446
+            ],
+            [
+              80.9473908,
+              26.9827281
+            ],
+            [
+              80.9473489,
+              26.9819
+            ],
+            [
+              80.9464126,
+              26.9819
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ABADI-0172",
+        "survey_plot_no": "AB-172",
+        "owner_name": "Gauri Shankar Tiwari",
+        "father_husband_name": "Late Kedarnath",
+        "area_sq_mtr": 7620.6,
+        "gharouni_card_no": "GH-2026-974302",
+        "land_type": "Residential",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry (GSD < 5cm)",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "svamitva-road-01",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9497,
+              26.98533
+            ],
+            [
+              80.94627,
+              26.98533
+            ],
+            [
+              80.94627,
+              26.9819
+            ],
+            [
+              80.94613,
+              26.9819
+            ],
+            [
+              80.94613,
+              26.98533
+            ],
+            [
+              80.9427,
+              26.98533
+            ],
+            [
+              80.9427,
+              26.98547
+            ],
+            [
+              80.94613,
+              26.98547
+            ],
+            [
+              80.94613,
+              26.9889
+            ],
+            [
+              80.94627,
+              26.9889
+            ],
+            [
+              80.94627,
+              26.98547
+            ],
+            [
+              80.9497,
+              26.98547
+            ],
+            [
+              80.9497,
+              26.98533
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "property_id": "UP-LKO-BKT-ROAD-0001",
+        "survey_plot_no": "ROAD-01",
+        "owner_name": "Public Village Road / Gali Corridor",
+        "father_husband_name": "Gram Sabha / PWD",
+        "area_sq_mtr": 1420.5,
+        "gharouni_card_no": "NA-PUBLIC-CORRIDOR",
+        "land_type": "Public Road",
+        "scheme": "SVAMITVA (Survey of India)",
+        "survey_technology": "UAV / High-Resolution Drone Photogrammetry",
+        "survey_date": "2026-03-15",
+        "accuracy_class": "1:500 Large Scale Rural Cadastre",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "tehsil": "Bakshi Ka Talab",
+        "village": "Rampur Kalan (Abadi Area)",
+        "village_lgd_code": "142890",
+        "is_public_road_adjacent": true
+      }
+    }
+  ]
+}

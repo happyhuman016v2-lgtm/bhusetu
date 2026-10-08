@@ -1,15 +1,31 @@
-import React, { useState } from 'react';
-import { Parcel, Role, PartitionResult, OfficerAuditEntry } from './types';
+import React, { useState, useEffect } from 'react';
+import {
+  Parcel,
+  Role,
+  PartitionResult,
+  OfficerAuditEntry,
+  SvamitvaParcel,
+  EncroachmentAnalysisResult,
+} from './types';
 import { INITIAL_PARCELS } from './data/seedParcels';
+import { SVAMITVA_VILLAGE_PARCELS } from './data/svamitvaVillageData';
+import {
+  fetchSvamitvaParcels,
+  runEncroachmentAnalysis,
+} from './services/svamitvaService';
 import { analyzeParcelSpatialIntegrity } from './services/gisEngine';
 import { Navbar } from './components/Navbar';
 import { MapEngine } from './components/MapEngine';
 import { CitizenPortal } from './components/CitizenPortal';
 import { OfficerPortal } from './components/OfficerPortal';
+import { SvamitvaPortal } from './components/SvamitvaPortal';
 import { MockRegistryModal } from './components/MockRegistryModal';
 
 export const App: React.FC = () => {
-  // Initialize parcels with spatial integrity analysis
+  // Dataset Mode: TRACGIS Cadastre vs SVAMITVA Drone Survey
+  const [datasetMode, setDatasetMode] = useState<'tracgis' | 'svamitva'>('tracgis');
+
+  // TRACGIS Parcels State
   const [parcels, setParcels] = useState<Parcel[]>(() => {
     return INITIAL_PARCELS.map((p) => {
       const analysis = analyzeParcelSpatialIntegrity(p);
@@ -30,6 +46,13 @@ export const App: React.FC = () => {
   const [pendingPartitions, setPendingPartitions] = useState<PartitionResult[]>([]);
   const [isRegistryModalOpen, setIsRegistryModalOpen] = useState(false);
   const [isMapExpanded, setIsMapExpanded] = useState(false);
+
+  // SVAMITVA Rural Drone Cadastre State
+  const [svamitvaParcels, setSvamitvaParcels] = useState<SvamitvaParcel[]>(SVAMITVA_VILLAGE_PARCELS);
+  const [selectedSvamitvaParcelId, setSelectedSvamitvaParcelId] = useState<string>('svamitva-101');
+  const [bufferDistance, setBufferDistance] = useState<number>(3.0);
+  const [encroachmentResults, setEncroachmentResults] = useState<EncroachmentAnalysisResult | null>(null);
+  const [isAnalyzingEncroachments, setIsAnalyzingEncroachments] = useState<boolean>(false);
 
   // Initial audit log entries
   const [auditLogs, setAuditLogs] = useState<OfficerAuditEntry[]>([
@@ -57,20 +80,63 @@ export const App: React.FC = () => {
     },
   ]);
 
+  // Load live SVAMITVA parcels & initial encroachment analysis from FastAPI backend
+  useEffect(() => {
+    async function initSvamitva() {
+      try {
+        const result = await fetchSvamitvaParcels();
+        if (result && result.features && result.features.length > 0) {
+          setSvamitvaParcels(result.features);
+        }
+      } catch (e) {
+        console.warn('Initial SVAMITVA fetch error:', e);
+      }
+      handleRunEncroachments(bufferDistance);
+    }
+    initSvamitva();
+  }, []);
+
+  // Recalculate encroachments when buffer distance changes (debounced)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleRunEncroachments(bufferDistance);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [bufferDistance]);
+
+  const handleRunEncroachments = async (dist: number) => {
+    setIsAnalyzingEncroachments(true);
+    try {
+      const results = await runEncroachmentAnalysis(dist);
+      if (results) {
+        setEncroachmentResults(results);
+      }
+    } catch (e) {
+      console.warn('Encroachment analysis error:', e);
+    } finally {
+      setIsAnalyzingEncroachments(false);
+    }
+  };
+
   const selectedParcel = parcels.find((p) => p.id === selectedParcelId) || parcels[0];
+  const selectedSvamitvaParcel =
+    svamitvaParcels.find((p) => p.id === selectedSvamitvaParcelId || p.properties?.property_id === selectedSvamitvaParcelId) ||
+    svamitvaParcels[0];
 
   const handleSelectParcel = (id: string) => {
     setSelectedParcelId(id);
     setSelectionEpoch(Date.now());
-    // Reset partition if switching to a parcel with different boundaries
     if (activePartition && activePartition.parcelId !== id) {
       setActivePartition(undefined);
     }
   };
 
+  const handleSelectSvamitvaParcel = (id: string) => {
+    setSelectedSvamitvaParcelId(id);
+  };
+
   const handleSubmitPartitionToOfficer = (partition: PartitionResult) => {
     setPendingPartitions((prev) => {
-      // Avoid duplicate
       if (prev.some((item) => item.id === partition.id)) return prev;
       return [partition, ...prev];
     });
@@ -82,8 +148,6 @@ export const App: React.FC = () => {
   };
 
   const handleAddAuditLog = (entry: Omit<OfficerAuditEntry, 'id' | 'timestamp' | 'hash'>) => {
-    const rawString = `${entry.action}_${entry.parcelId}_${Date.now()}`;
-    // Simple fast hex hash for client demo
     let hash = '';
     for (let i = 0; i < 64; i++) {
       hash += Math.floor(Math.random() * 16).toString(16);
@@ -110,14 +174,27 @@ export const App: React.FC = () => {
         onRoleChange={setActiveRole}
         onOpenRegistryModal={() => setIsRegistryModalOpen(true)}
         totalParcelsCount={parcels.length}
+        datasetMode={datasetMode}
+        onDatasetModeChange={setDatasetMode}
       />
 
       {/* Main Content: 2-Column Split View with Expandable Map */}
       <main className="flex-1 w-full max-w-[1850px] mx-auto p-2 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Left Column: Citizen or Officer Portal (Hidden when Map is Expanded) */}
+        {/* Left Column (Hidden when Map is Expanded) */}
         {!isMapExpanded && (
           <div className="lg:col-span-4 xl:col-span-3.5 overflow-y-auto max-h-[calc(100vh-100px)] pr-1">
-            {activeRole === 'citizen' ? (
+            {datasetMode === 'svamitva' ? (
+              <SvamitvaPortal
+                parcels={svamitvaParcels}
+                selectedParcel={selectedSvamitvaParcel}
+                onSelectParcel={handleSelectSvamitvaParcel}
+                bufferDistance={bufferDistance}
+                onBufferDistanceChange={setBufferDistance}
+                encroachmentResults={encroachmentResults}
+                isAnalyzing={isAnalyzingEncroachments}
+                onRunAnalysis={() => handleRunEncroachments(bufferDistance)}
+              />
+            ) : activeRole === 'citizen' ? (
               <CitizenPortal
                 parcels={parcels}
                 selectedParcel={selectedParcel}
@@ -147,11 +224,18 @@ export const App: React.FC = () => {
           } h-[600px] lg:h-[calc(100vh-100px)] sticky top-18`}
         >
           <MapEngine
+            datasetMode={datasetMode}
             parcels={parcels}
             selectedParcelId={selectedParcelId}
             selectionEpoch={selectionEpoch}
             onSelectParcel={handleSelectParcel}
             activePartition={activePartition}
+            svamitvaParcels={svamitvaParcels}
+            selectedSvamitvaParcelId={selectedSvamitvaParcelId}
+            onSelectSvamitvaParcel={handleSelectSvamitvaParcel}
+            bufferDistance={bufferDistance}
+            onBufferDistanceChange={setBufferDistance}
+            encroachmentResults={encroachmentResults}
             isMapExpanded={isMapExpanded}
             onToggleExpandMap={() => setIsMapExpanded(!isMapExpanded)}
           />
@@ -162,11 +246,10 @@ export const App: React.FC = () => {
       <footer className="bg-[#23201F] text-[#E7DFD5] text-xs py-3 px-4 border-t border-[#383432]">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
           <div>
-            <span className="font-bold text-white">BhuSetu v2.0</span> • Bharat Unified Land Stack • HackITon '26
-            Prototype
+            <span className="font-bold text-white">BhuSetu v2.0</span> • Bharat Unified Land Stack • SVAMITVA Rural Drone Cadastre Pipeline
           </div>
           <div className="text-[11px] text-[#A89F91]">
-            KPR Institute of Engineering and Technology • Department of Land Resources (DoLR) Reference
+            Survey of India (SoI) • Ministry of Panchayati Raj • Large-Scale Rural UAV Mapping
           </div>
         </div>
       </footer>

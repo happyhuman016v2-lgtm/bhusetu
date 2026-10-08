@@ -122,3 +122,63 @@ export interface OfficerAuditEntry {
   details: string;
   hash: string;
 }
+
+export interface SvamitvaParcelProperties {
+  property_id: string;
+  survey_plot_no: string;
+  owner_name: string;
+  father_husband_name: string;
+  area_sq_mtr: number;
+  gharouni_card_no: string;
+  land_type: string;
+  scheme: string;
+  survey_technology: string;
+  survey_date: string;
+  accuracy_class: string;
+  state: string;
+  district: string;
+  tehsil: string;
+  village: string;
+  village_lgd_code: string;
+  is_public_road_adjacent: boolean;
+}
+
+export interface SvamitvaParcel {
+  type: 'Feature';
+  id: string;
+  geometry: GeoJSON.Polygon;
+  properties: SvamitvaParcelProperties;
+}
+
+export interface EncroachmentConflict {
+  type: 'Feature';
+  id: string;
+  geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon;
+  properties: {
+    conflict_type: string;
+    dispute_severity: 'CRITICAL' | 'WARNING' | 'INFO';
+    overlap_area_sqm: number;
+    encroaching_parcel_id: string;
+    survey_plot_no: string;
+    owner_name: string;
+    gharouni_card_no: string;
+    affected_asset: string;
+    buffer_distance_tested_m: number;
+    statutory_clause: string;
+    dispute_risk_score: number;
+  };
+}
+
+export interface EncroachmentAnalysisResult {
+  type: 'FeatureCollection';
+  name: string;
+  features: EncroachmentConflict[];
+  metadata: {
+    total_conflicts_detected: number;
+    total_encroachment_sqm: number;
+    tested_buffer_meters: number;
+    critical_disputes_count: number;
+    warning_disputes_count: number;
+  };
+}
+

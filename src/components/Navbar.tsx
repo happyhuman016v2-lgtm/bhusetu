@@ -7,6 +7,8 @@ interface Props {
   onRoleChange: (role: Role) => void;
   onOpenRegistryModal: () => void;
   totalParcelsCount: number;
+  datasetMode?: 'tracgis' | 'svamitva';
+  onDatasetModeChange?: (mode: 'tracgis' | 'svamitva') => void;
 }
 
 export const Navbar: React.FC<Props> = ({
@@ -14,6 +16,8 @@ export const Navbar: React.FC<Props> = ({
   onRoleChange,
   onOpenRegistryModal,
   totalParcelsCount,
+  datasetMode = 'tracgis',
+  onDatasetModeChange,
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-[#C85A32] text-white shadow-md border-b border-[#A94424]">
@@ -38,8 +42,35 @@ export const Navbar: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Center / Right: Role Switcher & Ingestion Button */}
-        <div className="flex items-center gap-3">
+        {/* Center: Dataset Mode Switcher (TRACGIS vs SVAMITVA Drone Survey) */}
+        {onDatasetModeChange && (
+          <div className="hidden lg:flex items-center bg-black/25 p-1 rounded-xl border border-white/15 text-xs font-bold">
+            <button
+              onClick={() => onDatasetModeChange('tracgis')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                datasetMode === 'tracgis'
+                  ? 'bg-[#23201F] text-white shadow-xs'
+                  : 'text-white/80 hover:text-white'
+              }`}
+            >
+              🗺️ TRACGIS Cadastre ({totalParcelsCount})
+            </button>
+            <button
+              onClick={() => onDatasetModeChange('svamitva')}
+              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                datasetMode === 'svamitva'
+                  ? 'bg-[#23201F] text-white shadow-xs'
+                  : 'text-white/80 hover:text-white'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>🛰️ SVAMITVA Drone Survey (73)</span>
+            </button>
+          </div>
+        )}
+
+        {/* Right: Role Switcher & Ingestion Button */}
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Mock Registry Trigger */}
           <button
             onClick={onOpenRegistryModal}
@@ -47,33 +78,33 @@ export const Navbar: React.FC<Props> = ({
             title="Import or simulate RoR Land Registry Data"
           >
             <Database className="w-3.5 h-3.5 text-amber-300" />
-            <span>Mock Registry ({totalParcelsCount} Plots)</span>
+            <span>Registry</span>
           </button>
 
           {/* Role Switcher Pills */}
           <div className="bg-[#23201F] p-1 rounded-xl flex items-center shadow-inner border border-black/20">
             <button
               onClick={() => onRoleChange('citizen')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeRole === 'citizen'
                   ? 'bg-[#C85A32] text-white shadow-sm'
                   : 'text-[#FAF7F2]/70 hover:text-white'
               }`}
             >
               <UserCheck className="w-3.5 h-3.5" />
-              <span>Citizen Portal</span>
+              <span className="hidden sm:inline">Citizen</span>
             </button>
 
             <button
               onClick={() => onRoleChange('officer')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeRole === 'officer'
                   ? 'bg-[#C85A32] text-white shadow-sm'
                   : 'text-[#FAF7F2]/70 hover:text-white'
               }`}
             >
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Officer Portal</span>
+              <span className="hidden sm:inline">Officer</span>
             </button>
           </div>
         </div>
