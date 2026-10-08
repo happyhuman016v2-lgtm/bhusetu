@@ -10,7 +10,6 @@ import {
   Maximize2,
   Minimize2,
   Columns,
-  SlidersHorizontal,
 } from 'lucide-react';
 
 interface Props {
@@ -56,14 +55,14 @@ const BASE_MAP_STYLE: maplibregl.StyleSpecification = {
       type: 'raster',
       source: 'osm-street',
       minzoom: 0,
-      maxzoom: 20,
+      maxzoom: 22,
     },
     {
       id: 'drone-layer',
       type: 'raster',
       source: 'drone-source',
       minzoom: 0,
-      maxzoom: 19,
+      maxzoom: 24,
       paint: {
         'raster-opacity': 0.75,
       },
@@ -71,11 +70,11 @@ const BASE_MAP_STYLE: maplibregl.StyleSpecification = {
   ],
 };
 
-const SATELLITE_ONLY_STYLE: maplibregl.StyleSpecification = {
+const SATELLITE_BASE_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
   sources: {
-    'drone-source': {
+    'satellite-source': {
       type: 'raster',
       tiles: [SATELLITE_TILES_URL],
       tileSize: 256,
@@ -85,11 +84,14 @@ const SATELLITE_ONLY_STYLE: maplibregl.StyleSpecification = {
   },
   layers: [
     {
-      id: 'drone-layer-right',
+      id: 'satellite-tiles',
       type: 'raster',
-      source: 'drone-source',
+      source: 'satellite-source',
       minzoom: 0,
-      maxzoom: 19,
+      maxzoom: 24,
+      paint: {
+        'raster-opacity': 1.0,
+      },
     },
   ],
 };
@@ -195,18 +197,15 @@ export const MapEngine: React.FC<Props> = ({
   const selectedParcelIdRef = useRef(selectedParcelId);
   selectedParcelIdRef.current = selectedParcelId;
 
-  // Split View Controls
+  // Split View Controls (Side-by-side Dual Panes)
   const [isSplitView, setIsSplitView] = useState<boolean>(false);
-  const [splitMode, setSplitMode] = useState<'curtain' | 'dual'>('curtain');
-  const [curtainPosition, setCurtainPosition] = useState<number>(50); // 0 to 100 percent
-  const isDraggingCurtainRef = useRef<boolean>(false);
 
   // Layer Visibility & Opacity
   const [satelliteOpacity, setSatelliteOpacity] = useState<number>(0.75);
   const [showBoundaries, setShowBoundaries] = useState<boolean>(true);
   const [showBuffers, setShowBuffers] = useState<boolean>(true);
 
-  // Active sync driver for dual split mode (prevents ping-pong loops)
+  // Active sync driver for dual split mode (prevents feedback loops & ensures kinetic inertia)
   const activeDriverRef = useRef<'left' | 'right' | null>(null);
 
   // Initial Center on first parcel
@@ -344,7 +343,7 @@ export const MapEngine: React.FC<Props> = ({
       },
     });
 
-    // Sharp Cadastral Boundary Line (Gold on Satellite, Crisp White/Dark on Street)
+    // Sharp Cadastral Boundary Line (Bright Gold on Satellite, Crisp White/Dark on Street)
     map.addLayer({
       id: `${prefix}parcels-line`,
       type: 'line',
@@ -373,7 +372,7 @@ export const MapEngine: React.FC<Props> = ({
       },
     });
 
-    // Survey Number Labels
+    // Survey Number Labels (High Contrast Halos)
     map.addLayer({
       id: `${prefix}parcels-labels`,
       type: 'symbol',
@@ -490,7 +489,7 @@ export const MapEngine: React.FC<Props> = ({
     }
   }, [updateMapData, parcels, selectedParcelId, activePartition, showBoundaries, showBuffers]);
 
-  // Satellite Opacity Slider (When NOT in Split View)
+  // Satellite Opacity Slider on Left Map (when NOT in Split View)
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -509,7 +508,7 @@ export const MapEngine: React.FC<Props> = ({
     }
   }, [satelliteOpacity, isSplitView]);
 
-  // Initialize & Synchronize Secondary Map when Split View is Active
+  // Side-by-Side Split View Synchronization
   useEffect(() => {
     const primary = mapRef.current;
 
@@ -529,22 +528,19 @@ export const MapEngine: React.FC<Props> = ({
     const currentBearing = primary.getBearing();
     const currentPitch = primary.getPitch();
 
-    // Create Secondary Map (Satellite High-Res Photogrammetry)
+    // Secondary Map (Esri High-Resolution Satellite Photogrammetry)
     const mapRight = new maplibregl.Map({
       container: mapRightContainerRef.current,
-      style: SATELLITE_ONLY_STYLE,
+      style: SATELLITE_BASE_STYLE,
       center: currentCenter,
       zoom: currentZoom,
       bearing: currentBearing,
       pitch: currentPitch,
       maxZoom: 19.5,
       minZoom: 4,
-      interactive: splitMode === 'dual', // In curtain mode, primary drives all interactions
     });
 
-    if (splitMode === 'dual') {
-      mapRight.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
-    }
+    mapRight.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
     mapRightRef.current = mapRight;
 
     mapRight.on('load', () => {
@@ -552,10 +548,9 @@ export const MapEngine: React.FC<Props> = ({
       updateMapData(mapRight, 'right');
     });
 
-    // Silky Smooth Synchronization using MapLibre's camera state machine
-    // Zero rAF frame dropping, zero lost kinetic momentum!
+    // Zero-lag, bidirectional sync preserving kinetic inertia
     const syncLeftToRight = () => {
-      if (activeDriverRef.current === 'right' || !mapRightRef.current) return;
+      if (activeDriverRef.current !== 'left' || !mapRightRef.current) return;
       mapRightRef.current.jumpTo({
         center: primary.getCenter(),
         zoom: primary.getZoom(),
@@ -565,7 +560,7 @@ export const MapEngine: React.FC<Props> = ({
     };
 
     const syncRightToLeft = () => {
-      if (activeDriverRef.current === 'left' || !mapRef.current) return;
+      if (activeDriverRef.current !== 'right' || !mapRef.current) return;
       mapRef.current.jumpTo({
         center: mapRight.getCenter(),
         zoom: mapRight.getZoom(),
@@ -574,7 +569,6 @@ export const MapEngine: React.FC<Props> = ({
       });
     };
 
-    // Primary events
     const onPrimaryMoveStart = () => {
       if (!activeDriverRef.current) activeDriverRef.current = 'left';
     };
@@ -589,7 +583,6 @@ export const MapEngine: React.FC<Props> = ({
     primary.on('move', onPrimaryMove);
     primary.on('moveend', onPrimaryMoveEnd);
 
-    // Follower events (Only active in dual pane mode)
     const onRightMoveStart = () => {
       if (!activeDriverRef.current) activeDriverRef.current = 'right';
     };
@@ -622,7 +615,7 @@ export const MapEngine: React.FC<Props> = ({
       mapRightRef.current = null;
       primary.resize();
     };
-  }, [isSplitView, splitMode]);
+  }, [isSplitView]);
 
   // Handle Resize immediately on layout expand/collapse
   useEffect(() => {
@@ -631,7 +624,7 @@ export const MapEngine: React.FC<Props> = ({
       mapRightRef.current?.resize();
     }, 50);
     return () => clearTimeout(timer);
-  }, [isMapExpanded, isSplitView, splitMode]);
+  }, [isMapExpanded, isSplitView]);
 
   // Focus Selected Boundary button
   const handleFocusSelected = () => {
@@ -639,33 +632,6 @@ export const MapEngine: React.FC<Props> = ({
     if (selected && selected.geometry) {
       if (mapRef.current) fitToParcel(mapRef.current, selected);
       if (mapRightRef.current) fitToParcel(mapRightRef.current, selected);
-    }
-  };
-
-  // Draggable Curtain Divider event listeners
-  const handleCurtainPointerDown = (e: React.PointerEvent) => {
-    e.preventDefault();
-    isDraggingCurtainRef.current = true;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  };
-
-  const handleCurtainPointerMove = (e: React.PointerEvent) => {
-    if (!isDraggingCurtainRef.current || !mapContainerRef.current) return;
-    const rect = mapContainerRef.current.parentElement?.getBoundingClientRect();
-    if (!rect) return;
-    const x = e.clientX - rect.left;
-    const pct = Math.max(5, Math.min(95, (x / rect.width) * 100));
-    setCurtainPosition(pct);
-  };
-
-  const handleCurtainPointerUp = (e: React.PointerEvent) => {
-    if (isDraggingCurtainRef.current) {
-      isDraggingCurtainRef.current = false;
-      try {
-        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-      } catch {
-        // Ignored
-      }
     }
   };
 
@@ -681,39 +647,11 @@ export const MapEngine: React.FC<Props> = ({
               ? 'bg-[#23201F] text-white border-black'
               : 'bg-white/95 backdrop-blur-md text-[#23201F] border-[#E7DFD5] hover:bg-[#FAF7F2]'
           }`}
-          title="Toggle Comparison: Street Map vs Satellite Imagery"
+          title="Toggle Side-by-Side Comparison: Cadastral Street Map vs Satellite Imagery"
         >
           <Columns className="w-4 h-4 text-[#C85A32]" />
           <span>{isSplitView ? 'Exit Split View' : 'Split View (Street vs Sat)'}</span>
         </button>
-
-        {/* Split View Sub-Mode Switcher (When Split View is Active) */}
-        {isSplitView && (
-          <div className="bg-white/95 backdrop-blur-md px-2 py-1.5 rounded-xl shadow-lg border border-[#E7DFD5] flex items-center gap-1 text-xs">
-            <button
-              onClick={() => setSplitMode('curtain')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                splitMode === 'curtain'
-                  ? 'bg-[#C85A32] text-white shadow-xs'
-                  : 'text-[#383432] hover:bg-[#FAF7F2]'
-              }`}
-              title="Interactive Wipe Curtain: Slide divider across the parcel"
-            >
-              ⬌ Swipe Curtain
-            </button>
-            <button
-              onClick={() => setSplitMode('dual')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                splitMode === 'dual'
-                  ? 'bg-[#C85A32] text-white shadow-xs'
-                  : 'text-[#383432] hover:bg-[#FAF7F2]'
-              }`}
-              title="Side-by-Side Dual View: Synchronized panes"
-            >
-              ◫ Side-by-Side
-            </button>
-          </div>
-        )}
 
         {/* Satellite Imagery Slider & Toggle (When NOT in Split View) */}
         {!isSplitView && (
@@ -807,76 +745,35 @@ export const MapEngine: React.FC<Props> = ({
         )}
       </div>
 
-      {/* Main Map Viewport */}
-      <div
-        className="w-full h-full flex flex-1 overflow-hidden relative select-none"
-        onPointerMove={isSplitView && splitMode === 'curtain' ? handleCurtainPointerMove : undefined}
-        onPointerUp={isSplitView && splitMode === 'curtain' ? handleCurtainPointerUp : undefined}
-      >
-        {/* Left / Base Map Container */}
+      {/* Main Map Viewport (Side-by-Side Dual Split View) */}
+      <div className="w-full h-full flex flex-1 overflow-hidden relative">
+        {/* Left Map Pane: Cadastral Street Map */}
         <div
           ref={mapContainerRef}
           className={`h-full ${
-            isSplitView && splitMode === 'dual'
-              ? 'w-1/2 border-r-2 border-[#C85A32]'
-              : 'w-full'
+            isSplitView ? 'w-1/2 border-r-2 border-[#C85A32]' : 'w-full'
           }`}
         />
 
-        {/* Secondary Map Container (Satellite) */}
+        {/* Left Pane Badge in Split Mode */}
         {isSplitView && (
-          <div
-            ref={mapRightContainerRef}
-            className={`h-full ${
-              splitMode === 'dual'
-                ? 'w-1/2 relative'
-                : 'absolute inset-0 pointer-events-none'
-            }`}
-            style={
-              splitMode === 'curtain'
-                ? {
-                    clipPath: `inset(0 0 0 ${curtainPosition}%)`,
-                  }
-                : undefined
-            }
-          />
-        )}
-
-        {/* Swipe Curtain Draggable Handle (Curtain Mode Only) */}
-        {isSplitView && splitMode === 'curtain' && (
-          <div
-            className="absolute top-0 bottom-0 z-30 cursor-ew-resize flex items-center justify-center pointer-events-auto"
-            style={{
-              left: `${curtainPosition}%`,
-              transform: 'translateX(-50%)',
-              width: '40px',
-            }}
-            onPointerDown={handleCurtainPointerDown}
-          >
-            {/* Vertical Divider Line */}
-            <div className="w-[3px] h-full bg-[#C85A32] shadow-[0_0_10px_rgba(0,0,0,0.5)]" />
-
-            {/* Floating Handle Pill */}
-            <div className="absolute px-3 py-1.5 bg-[#23201F] text-white rounded-full text-[11px] font-bold shadow-2xl border-2 border-[#C85A32] flex items-center gap-1.5 select-none hover:scale-105 active:scale-95 transition-transform">
-              <SlidersHorizontal className="w-3.5 h-3.5 text-[#C85A32]" />
-              <span className="tracking-tight">Slide to Compare</span>
-            </div>
+          <div className="absolute top-16 left-3 z-10 bg-white/90 backdrop-blur-xs px-2.5 py-1 rounded-lg shadow border border-[#E7DFD5] text-[11px] font-bold text-[#23201F] flex items-center gap-1.5 pointer-events-none">
+            <span className="w-2 h-2 rounded-full bg-blue-600" />
+            <span>🗺️ Cadastral Street Map</span>
           </div>
         )}
 
-        {/* Mode Badges in Split View */}
+        {/* Right Map Pane: Esri Satellite Photogrammetry */}
         {isSplitView && (
-          <>
-            <div className="absolute top-16 left-3 z-10 bg-white/90 backdrop-blur-xs px-2.5 py-1 rounded-lg shadow border border-[#E7DFD5] text-[11px] font-bold text-[#23201F] flex items-center gap-1.5 pointer-events-none">
-              <span className="w-2 h-2 rounded-full bg-blue-600" />
-              <span>🗺️ Cadastral Street</span>
-            </div>
+          <div ref={mapRightContainerRef} className="w-1/2 h-full relative" />
+        )}
 
-            <div className="absolute top-16 right-3 z-10 bg-black/80 backdrop-blur-xs px-2.5 py-1 rounded-lg shadow border border-white/20 text-[11px] font-bold text-white flex items-center gap-1.5 pointer-events-none">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span>🛰️ Satellite Photogrammetry</span>
-            </div>
-          </>
+        {/* Right Pane Badge in Split Mode */}
+        {isSplitView && (
+          <div className="absolute top-16 right-3 z-10 bg-black/80 backdrop-blur-xs px-2.5 py-1 rounded-lg shadow border border-white/20 text-[11px] font-bold text-white flex items-center gap-1.5 pointer-events-none">
+            <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            <span>🛰️ Esri Satellite Photogrammetry</span>
+          </div>
         )}
       </div>
 
