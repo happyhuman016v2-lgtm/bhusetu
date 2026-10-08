@@ -23,15 +23,16 @@ interface Props {
 const BASE_MAP_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
-    'carto-positron': {
+    'osm-street': {
       type: 'raster',
       tiles: [
-        'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-        'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-        'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+        'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png',
       ],
       tileSize: 256,
-      attribution: '&copy; CARTO &copy; OpenStreetMap contributors',
+      attribution: '&copy; OpenStreetMap contributors',
+      maxzoom: 19,
     },
     'drone-source': {
       type: 'raster',
@@ -47,7 +48,7 @@ const BASE_MAP_STYLE: maplibregl.StyleSpecification = {
     {
       id: 'base-tiles',
       type: 'raster',
-      source: 'carto-positron',
+      source: 'osm-street',
       minzoom: 0,
       maxzoom: 20,
     },
