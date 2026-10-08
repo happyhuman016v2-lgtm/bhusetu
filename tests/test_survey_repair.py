@@ -386,6 +386,94 @@ def test_rbac_citizen_vs_officer_permissions():
     assert officer_res.json()["status"] == "ORDER_COMMITTED_TO_LEDGER"
 
 
+# ---------------------------------------------------------------------------
+# Test 8: Road Source Validation & Interpretation
+# ---------------------------------------------------------------------------
+def test_road_source_validation_and_corridor_analysis():
+    """
+    Verify RoadSource Service:
+    - LineString geometry detected as CENTERLINE
+    - Polygon geometry detected as ROAD_BOUNDARY
+    - Road source states: SYNTHETIC_DEMO_ROAD, IMPORTED_ROAD, NO_ROAD_DATA
+    - Corridor metric buffer intersection calculates true metric overlap area and affected %
+    - Never generates automatic legal eviction verdict
+    """
+    from services.road_source_service import road_source_service
+    from services.gis_engine import analyze_encroachments
+
+    # 1. Test LineString Centerline GeoJSON validation
+    centerline_geojson = {
+        "type": "FeatureCollection",
+        "features": [{
+            "type": "Feature",
+            "id": "road-cl-test",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [[80.944, 26.985], [80.946, 26.985]]
+            },
+            "properties": {"name": "Test Arterial Corridor"}
+        }]
+    }
+    raw_cl = json.dumps(centerline_geojson).encode("utf-8")
+    is_valid, errors, feats, meta = road_source_service.validate_road_geojson(raw_cl, "cl.geojson")
+    assert is_valid
+    assert meta["primary_interpretation"] == "CENTERLINE"
+    assert len(feats) == 1
+
+    # 2. Ingest road file
+    ingest_res = road_source_service.ingest_road_file(raw_cl, "cl.geojson", supplier="Test Road Authority")
+    assert ingest_res["success"]
+    assert ingest_res["state"] == "IMPORTED_ROAD"
+    assert ingest_res["geometry_interpretation"] == "CENTERLINE"
+
+    road_state = road_source_service.get_source_state()
+    assert road_state["state"] == "IMPORTED_ROAD"
+
+    # 3. Analyze corridor overlap with test parcel
+    # Parcel intersecting the centerline
+    test_parcel = {
+        "type": "Feature",
+        "id": "test-p1",
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [[
+                [80.9445, 26.9848],
+                [80.9455, 26.9848],
+                [80.9455, 26.9852],
+                [80.9445, 26.9852],
+                [80.9445, 26.9848]
+            ]]
+        },
+        "properties": {
+            "property_id": "P-TEST-001",
+            "survey_plot_no": "101",
+            "owner_name": "Test Farmer",
+            "area_sq_mtr": 400.0,
+            "land_type": "Residential"
+        }
+    }
+
+    results = analyze_encroachments(
+        features=[test_parcel],
+        buffer_meters=5.0,
+        road_features=feats,
+        road_source_meta=road_state["metadata"]
+    )
+
+    assert results["type"] == "FeatureCollection"
+    assert "cadastral_corridor_review_zones" in results["name"]
+    assert len(results["features"]) > 0
+    c0 = results["features"][0]["properties"]
+    assert c0["overlap_area_sqm"] > 0
+    assert c0["affected_pct"] > 0
+    assert "potential overlap" in c0["legal_status"].lower()
+    assert "eviction" not in c0["legal_status"].lower()
+
+    # 4. Restore demo road
+    demo_res = road_source_service.load_demo_road()
+    assert demo_res["state"] == "SYNTHETIC_DEMO_ROAD"
+
+
 if __name__ == "__main__":
     print("Executing BhuSetu SVAMITVA Survey Repair & Validation Test Suite...")
     tests = [
@@ -399,6 +487,7 @@ if __name__ == "__main__":
         ("Test 5: Source State Transitions & SHA-256 Provenance", test_survey_source_state_transitions),
         ("Test 6: WFS Connector Diagnostic & Host Whitelist", test_wfs_connector_diagnostic_and_whitelist),
         ("Test 7: RBAC Citizen vs Officer Permissions", test_rbac_citizen_vs_officer_permissions),
+        ("Test 8: Road Source Validation & Corridor Analysis", test_road_source_validation_and_corridor_analysis),
     ]
 
     passed = 0
@@ -412,4 +501,5 @@ if __name__ == "__main__":
             raise e
 
     print(f"\nSUCCESS: All {passed}/{len(tests)} survey repair and validation tests passed!")
+
 

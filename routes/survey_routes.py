@@ -17,11 +17,13 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status
 from pydantic import BaseModel, Field
 
 from services.survey_source_service import survey_source_service
+from services.road_source_service import road_source_service
 from services.wfs_connector import wfs_connector_service
 from services.gis_engine import calculate_area_discrepancy
 
 logger = logging.getLogger("BhuSetu_SurveyRoutes")
 router = APIRouter(prefix="/api/survey", tags=["Survey Ingestion & WFS Management"])
+
 
 
 class WFSTestRequest(BaseModel):
@@ -191,3 +193,80 @@ def calculate_discrepancy_endpoint(req: DiscrepancyCalcRequest):
         survey_area_sqm=req.survey_area_sqm,
         registered_area_sqm=req.registered_area_sqm
     )
+
+
+# --- ROAD SOURCE ENDPOINTS ---
+
+@router.get("/road-source-state")
+def get_road_source_state():
+    """Retrieve active road data source state and metadata."""
+    return road_source_service.get_source_state()
+
+
+@router.get("/roads")
+def get_active_roads():
+    """Retrieve active road FeatureCollection."""
+    state_info = road_source_service.get_source_state()
+    features = road_source_service.get_active_roads()
+    return {
+        "type": "FeatureCollection",
+        "name": f"bhusetu_roads_{state_info['state'].lower()}",
+        "metadata": state_info["metadata"],
+        "total_roads": len(features),
+        "features": features
+    }
+
+
+@router.post("/upload-road")
+async def upload_road_geojson(
+    file: UploadFile = File(...),
+    supplier: Optional[str] = Form(None),
+    road_name: Optional[str] = Form(None)
+):
+    """
+    Ingest Road/Corridor GeoJSON:
+    - LineString / MultiLineString: CENTERLINE (buffer represents corridor distance)
+    - Polygon / MultiPolygon: ROAD_BOUNDARY
+    """
+    if not file.filename.lower().endswith((".geojson", ".json")):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File must be a .geojson or .json document."
+        )
+
+    content = await file.read()
+    if len(content) > 15 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File exceeds maximum allowed upload size (15MB)."
+        )
+
+    try:
+        result = road_source_service.ingest_road_file(
+            raw_content=content,
+            filename=file.filename,
+            supplier=supplier or "User Upload",
+            road_name_override=road_name
+        )
+        return result
+    except ValueError as val_err:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(val_err))
+    except Exception as exc:
+        logger.error(f"Failed to ingest road GeoJSON: {exc}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal road ingestion error: {str(exc)}"
+        )
+
+
+@router.post("/load-demo-road")
+def load_demo_road_endpoint():
+    """Restores synthetic demonstration road geometry."""
+    return road_source_service.load_demo_road()
+
+
+@router.post("/clear-road")
+def clear_road_endpoint():
+    """Clears road source to NO_ROAD_DATA."""
+    return road_source_service.clear_road_source()
+

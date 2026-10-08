@@ -1,0 +1,83 @@
+{
+  "type": "FeatureCollection",
+  "name": "demo_road_geometry",
+  "metadata": {
+    "source_name": "Demo Road Geometry",
+    "source_type": "SYNTHETIC_DEMO_ROAD",
+    "crs": "EPSG:4326",
+    "geometry_interpretation": "ROAD_BOUNDARY",
+    "label": "Demo Road Geometry (Synthetic Demonstration)"
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "demo-road-cross-01",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9497,
+              26.98533
+            ],
+            [
+              80.94627,
+              26.98533
+            ],
+            [
+              80.94627,
+              26.9819
+            ],
+            [
+              80.94613,
+              26.9819
+            ],
+            [
+              80.94613,
+              26.98533
+            ],
+            [
+              80.9427,
+              26.98533
+            ],
+            [
+              80.9427,
+              26.98547
+            ],
+            [
+              80.94613,
+              26.98547
+            ],
+            [
+              80.94613,
+              26.9889
+            ],
+            [
+              80.94627,
+              26.9889
+            ],
+            [
+              80.94627,
+              26.98547
+            ],
+            [
+              80.9497,
+              26.98547
+            ],
+            [
+              80.9497,
+              26.98533
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "road_name": "Demo Village Arterial Corridor",
+        "geometry_type": "ROAD_BOUNDARY",
+        "source": "SYNTHETIC DEMONSTRATION",
+        "dataset_id": "ds-demo-road-2026",
+        "provenance": "Synthetic fixture created for engine evaluation"
+      }
+    }
+  ]
+}

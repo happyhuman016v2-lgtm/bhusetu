@@ -160,14 +160,23 @@ export interface EncroachmentConflict {
     conflict_type: string;
     dispute_severity: 'CRITICAL' | 'WARNING' | 'INFO';
     overlap_area_sqm: number;
+    parcel_area_sqm?: number;
+    affected_pct?: number;
     encroaching_parcel_id: string;
     survey_plot_no: string;
     owner_name: string;
-    gharouni_card_no: string;
-    affected_asset: string;
+    gharouni_card_no?: string;
+    affected_asset?: string;
+    affected_corridor?: string;
     buffer_distance_tested_m: number;
-    statutory_clause: string;
-    dispute_risk_score: number;
+    geometry_interpretation?: 'CENTERLINE' | 'ROAD_BOUNDARY';
+    statutory_clause?: string;
+    dispute_risk_score?: number;
+    source_crs?: string;
+    analysis_crs?: string;
+    review_verdict?: string;
+    legal_status?: string;
+    is_positive_area_overlap?: boolean;
   };
 }
 
@@ -179,8 +188,15 @@ export interface EncroachmentAnalysisResult {
     total_conflicts_detected: number;
     total_encroachment_sqm: number;
     tested_buffer_meters: number;
-    critical_disputes_count: number;
-    warning_disputes_count: number;
+    critical_disputes_count?: number;
+    warning_disputes_count?: number;
+    positive_overlap_count?: number;
+    zero_area_touch_count?: number;
+    geometry_interpretation?: string;
+    source_crs?: string;
+    analysis_crs?: string;
+    road_source?: string;
+    disclaimer?: string;
   };
 }
 
@@ -336,5 +352,48 @@ export interface PropertyCardCertificate {
     village_lgd_code: string;
   };
 }
+
+export type RoadSourceState = 'IMPORTED_ROAD' | 'PUBLIC_VECTOR_ROAD' | 'SYNTHETIC_DEMO_ROAD' | 'NO_ROAD_DATA';
+
+export interface RoadFeatureProperties {
+  road_name?: string;
+  geometry_type: 'CENTERLINE' | 'ROAD_BOUNDARY';
+  source?: string;
+  dataset_id?: string;
+  [key: string]: any;
+}
+
+export interface RoadFeature {
+  type: 'Feature';
+  id: string;
+  geometry: GeoJSON.LineString | GeoJSON.MultiLineString | GeoJSON.Polygon | GeoJSON.MultiPolygon;
+  properties: RoadFeatureProperties;
+}
+
+export interface RoadSourceMetadata {
+  state: RoadSourceState;
+  source_type: string;
+  source_name: string;
+  dataset_id: string;
+  original_filename: string;
+  source_crs: string;
+  geometry_interpretation: 'CENTERLINE' | 'ROAD_BOUNDARY' | 'UNKNOWN';
+  supplier: string;
+  sha256_checksum?: string | null;
+  total_features: number;
+  imported_at: string;
+  disclaimer: string;
+}
+
+export interface RoadUploadResponse {
+  success: boolean;
+  state: RoadSourceState;
+  features_imported: number;
+  geometry_interpretation: 'CENTERLINE' | 'ROAD_BOUNDARY';
+  sha256_checksum: string;
+  dataset_id: string;
+  validation_warnings: string[];
+}
+
 
 

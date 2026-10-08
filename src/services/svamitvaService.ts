@@ -217,3 +217,62 @@ export async function clearSurveySource(): Promise<any> {
   return await res.json();
 }
 
+/**
+ * Road Source Service API clients
+ */
+export async function fetchRoadSourceState(): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE}/survey/road-source-state`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('Road source state fetch failed:', err);
+    return null;
+  }
+}
+
+export async function fetchRoadFeatures(): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE}/survey/roads`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('Road features fetch failed:', err);
+    return null;
+  }
+}
+
+export async function uploadRoadGeoJSON(
+  file: File,
+  supplier?: string,
+  roadName?: string
+): Promise<any> {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (supplier) formData.append('supplier', supplier);
+  if (roadName) formData.append('road_name', roadName);
+
+  const res = await fetch(`${API_BASE}/survey/upload-road`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({ detail: 'Road upload error' }));
+    throw new Error(errData.detail || `HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function loadDemoRoad(): Promise<any> {
+  const res = await fetch(`${API_BASE}/survey/load-demo-road`, { method: 'POST' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
+}
+
+export async function clearRoadSource(): Promise<any> {
+  const res = await fetch(`${API_BASE}/survey/clear-road`, { method: 'POST' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
+}
+
+

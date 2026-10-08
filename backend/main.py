@@ -162,15 +162,29 @@ def get_parcel_buffer(
 def post_analyze_encroachments(req: EncroachmentRequest):
     """
     Runs spatial intersection between private parcel buffers and public right-of-way corridors.
-    Returns detected conflict polygons and dispute risk scores.
+    Integrates independent RoadSource features and metadata.
+    Returns detected conflict polygons and affected area percentages.
     """
-    data = load_parcels_geojson()
-    features = data.get("features", [])
+    from services.survey_source_service import survey_source_service
+    from services.road_source_service import road_source_service
+
+    features = survey_source_service.get_active_parcels()
+    if not features:
+        data = load_parcels_geojson()
+        features = data.get("features", [])
 
     if req.parcel_ids:
         features = [f for f in features if f.get("id") in req.parcel_ids or f.get("properties", {}).get("property_id") in req.parcel_ids]
 
-    results = analyze_encroachments(features, buffer_meters=req.buffer_meters)
+    road_features = road_source_service.get_active_roads()
+    road_state = road_source_service.get_source_state()
+
+    results = analyze_encroachments(
+        features=features,
+        buffer_meters=req.buffer_meters,
+        road_features=road_features,
+        road_source_meta=road_state.get("metadata")
+    )
     return results
 
 

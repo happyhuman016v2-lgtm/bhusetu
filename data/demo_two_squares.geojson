@@ -1,0 +1,82 @@
+{
+  "type": "FeatureCollection",
+  "name": "demo_two_squares_fixture",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "sq1-original",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.945,
+              26.985000000000003
+            ],
+            [
+              80.94520155521049,
+              26.985000078508772
+            ],
+            [
+              80.94520146773922,
+              26.985180650717204
+            ],
+            [
+              80.94499991220701,
+              26.985180572207828
+            ],
+            [
+              80.945,
+              26.985000000000003
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "survey_plot_no": "SQ-01",
+        "owner_name": "Ramesh Kumar",
+        "area_sq_mtr": 400.0,
+        "recorded_legal_area_sqm": 400.0,
+        "land_type": "Residential"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "sq2-shifted",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              80.9450302332815,
+              26.985000011794693
+            ],
+            [
+              80.94523178849212,
+              26.98500009026023
+            ],
+            [
+              80.94523170106912,
+              26.985180662468746
+            ],
+            [
+              80.94503014553678,
+              26.98518058400261
+            ],
+            [
+              80.9450302332815,
+              26.985000011794693
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "survey_plot_no": "SQ-02",
+        "owner_name": "Suresh Kumar",
+        "area_sq_mtr": 400.0,
+        "recorded_legal_area_sqm": 400.0,
+        "land_type": "Residential"
+      }
+    }
+  ]
+}

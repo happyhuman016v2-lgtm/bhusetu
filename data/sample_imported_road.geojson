@@ -1,0 +1,35 @@
+{
+  "type": "FeatureCollection",
+  "name": "sample_imported_road",
+  "metadata": {
+    "source_name": "Village Access Corridor North",
+    "source_type": "IMPORTED_ROAD",
+    "crs": "EPSG:4326",
+    "geometry_interpretation": "CENTERLINE"
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "road-sample-cl-01",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            80.944,
+            26.98509
+          ],
+          [
+            80.946,
+            26.98509
+          ]
+        ]
+      },
+      "properties": {
+        "road_name": "North Boundary Access Track",
+        "geometry_type": "CENTERLINE",
+        "source": "Imported Cadastral Field Centerline",
+        "dataset_id": "ds-imported-road-fixture-01"
+      }
+    }
+  ]
+}

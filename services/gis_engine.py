@@ -177,45 +177,88 @@ def calculate_area_discrepancy(
 def analyze_encroachments(
     features: List[Dict[str, Any]],
     buffer_meters: float = 3.0,
-    road_layer_id: str = "svamitva-road-01"
+    road_features: Optional[List[Dict[str, Any]]] = None,
+    road_layer_id: str = "svamitva-road-01",
+    road_source_meta: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
-    Perform spatial intersection and conflict detection between:
-    - Private residential parcel buffers and Public Road / Corridors
+    Perform spatial intersection and review analysis between:
+    - Private cadastral parcels (or parcel buffers) and Public Road Corridors
+    - Handles CENTERLINE (buffers centerline by buffer_meters) vs ROAD_BOUNDARY (direct corridor polygon)
     - Distinguishes positive-area overlap from zero-area boundary touch
-    - Displays 'Potential corridor overlap requiring review', never automatic legal eviction verdict.
-    - Discloses source uncertainty.
+    - Calculates affected percentage: (intersection_area / parcel_area) * 100
+    - Displays 'Potential overlap — verification required', never automatic legal eviction verdict.
+    - Records source CRS and analysis UTM CRS.
     """
     conflict_features = []
-    road_geom = None
-    road_feature = None
+    road_geoms = []
 
-    # Locate road network feature
-    for f in features:
-        props = f.get("properties", {})
-        if props.get("land_type") == "Public Road" or f.get("id") == road_layer_id:
-            road_feature = f
-            road_geom = shape(f["geometry"])
-            break
-
-    if road_geom is None:
+    # 1. Gather road geometries from dedicated road_features if provided
+    if road_features:
+        for rf in road_features:
+            g = rf.get("geometry")
+            if g:
+                try:
+                    s = shape(g)
+                    if s and not s.is_empty:
+                        road_geoms.append((s, rf.get("properties", {})))
+                except Exception as e:
+                    logger.debug(f"Skipping road feature: {e}")
+    else:
+        # Fallback: Locate road features inside features array
         for f in features:
-            if "road" in f.get("properties", {}).get("land_type", "").lower():
-                road_geom = shape(f["geometry"])
-                break
+            props = f.get("properties", {})
+            if props.get("land_type") == "Public Road" or f.get("id") == road_layer_id or "road" in props.get("land_type", "").lower():
+                g = f.get("geometry")
+                if g:
+                    try:
+                        s = shape(g)
+                        if s and not s.is_empty:
+                            road_geoms.append((s, props))
+                    except Exception:
+                        pass
 
+    # Separate private parcels from any embedded road features
     private_parcels = [
         f for f in features
-        if f.get("properties", {}).get("land_type") not in ("Public Road",)
+        if f.get("properties", {}).get("land_type") not in ("Public Road",) and f.get("id") != road_layer_id
     ]
 
+    # Detect metric UTM CRS from centroid of dataset
     if features and features[0].get("geometry"):
         sample_c = shape(features[0]["geometry"]).centroid
+        utm_epsg = get_utm_epsg(sample_c.x, sample_c.y)
+    elif road_geoms:
+        sample_c = road_geoms[0][0].centroid
         utm_epsg = get_utm_epsg(sample_c.x, sample_c.y)
     else:
         utm_epsg = 32644
 
-    road_geom_utm = reproject_geom(clean_geometry(road_geom), 4326, utm_epsg) if road_geom else None
+    # Build unified road corridor in metric UTM
+    road_utm_geoms = []
+    primary_interpretation = road_source_meta.get("geometry_interpretation", "CENTERLINE") if road_source_meta else "CENTERLINE"
+
+    for r_geom, r_props in road_geoms:
+        r_clean = clean_geometry(r_geom)
+        if not r_clean:
+            continue
+        r_utm = reproject_geom(r_clean, 4326, utm_epsg)
+        if not r_utm:
+            continue
+
+        gtype = r_props.get("geometry_type") or r_geom.geom_type
+        if gtype in ("LineString", "MultiLineString") or primary_interpretation == "CENTERLINE":
+            # Centerline: buffer represents distance from centreline
+            buffered_corridor = r_utm.buffer(buffer_meters, resolution=16)
+            road_utm_geoms.append(clean_geometry(buffered_corridor))
+        else:
+            # Road Boundary polygon: represents actual right-of-way corridor
+            road_utm_geoms.append(clean_geometry(r_utm))
+
+    unified_road_corridor_utm = unary_union(road_utm_geoms) if road_utm_geoms else None
+    if unified_road_corridor_utm:
+        unified_road_corridor_utm = clean_geometry(unified_road_corridor_utm)
+
     total_encroachment_sqm = 0.0
 
     for p in private_parcels:
@@ -225,33 +268,37 @@ def analyze_encroachments(
             continue
 
         p_geom_utm = reproject_geom(p_geom_clean, 4326, utm_epsg)
-        p_buffered_utm = p_geom_utm.buffer(buffer_meters, resolution=16)
+        if p_geom_utm is None:
+            continue
 
-        if road_geom_utm and p_buffered_utm.intersects(road_geom_utm):
-            intersection_utm = p_buffered_utm.intersection(road_geom_utm)
+        parcel_area_sqm = round(float(p_geom_utm.area), 2)
+
+        if unified_road_corridor_utm and p_geom_utm.intersects(unified_road_corridor_utm):
+            intersection_utm = p_geom_utm.intersection(unified_road_corridor_utm)
             intersection_utm = clean_geometry(intersection_utm)
 
             if intersection_utm and not intersection_utm.is_empty:
-                overlap_sqm = round(intersection_utm.area, 2)
+                overlap_sqm = round(float(intersection_utm.area), 2)
+                affected_pct = round((overlap_sqm / parcel_area_sqm * 100.0), 2) if parcel_area_sqm > 0 else 0.0
 
                 # Separate zero-area boundary contact from positive-area overlap
                 if overlap_sqm <= 0.05 or intersection_utm.geom_type in ('LineString', 'MultiLineString', 'Point'):
                     conflict_type = "BOUNDARY_CONTACT_ZERO_OVERLAP"
                     severity = "INFO"
-                    review_label = "Abadi parcel boundary touches road reserve; zero positive area overlap."
+                    review_label = "Parcel boundary touches road corridor reserve; zero positive area overlap."
                 else:
                     conflict_type = "POTENTIAL_CORRIDOR_OVERLAP_REQUIRING_REVIEW"
                     total_encroachment_sqm += overlap_sqm
 
-                    if overlap_sqm > 25.0:
+                    if overlap_sqm > 25.0 or affected_pct > 15.0:
                         severity = "CRITICAL"
-                        review_label = f"Substantial buffer intrusion ({overlap_sqm} m²) into public corridor; physical site verification required."
-                    elif overlap_sqm > 10.0:
+                        review_label = f"Substantial corridor overlap ({overlap_sqm} m², {affected_pct}% of parcel); physical site inspection required."
+                    elif overlap_sqm > 10.0 or affected_pct > 5.0:
                         severity = "WARNING"
-                        review_label = f"Moderate buffer setback overlap ({overlap_sqm} m²); requires officer alignment review."
+                        review_label = f"Moderate setback overlap ({overlap_sqm} m², {affected_pct}% of parcel); requires officer alignment review."
                     else:
                         severity = "INFO"
-                        review_label = f"Minor buffer overlap ({overlap_sqm} m²) within typical UAV GPS tolerance envelope."
+                        review_label = f"Minor buffer overlap ({overlap_sqm} m², {affected_pct}% of parcel) within typical survey tolerance envelope."
 
                 conflict_wgs84 = reproject_geom(intersection_utm, utm_epsg, 4326)
 
@@ -263,15 +310,19 @@ def analyze_encroachments(
                         "conflict_type": conflict_type,
                         "dispute_severity": severity,
                         "overlap_area_sqm": overlap_sqm,
+                        "parcel_area_sqm": parcel_area_sqm,
+                        "affected_pct": affected_pct,
                         "is_positive_area_overlap": overlap_sqm > 0.05,
                         "encroaching_parcel_id": p.get("properties", {}).get("property_id") or p.get("id"),
                         "survey_plot_no": p.get("properties", {}).get("survey_plot_no", "Unknown"),
                         "owner_name": p.get("properties", {}).get("owner_name", "Unknown"),
-                        "affected_corridor": "Public Village Road Reserve",
+                        "affected_corridor": road_source_meta.get("source_name", "Public Road Corridor") if road_source_meta else "Public Road Corridor",
                         "buffer_distance_tested_m": buffer_meters,
-                        "source_uncertainty": "±5cm UAV Photogrammetry Ground Sampling Distance",
+                        "geometry_interpretation": primary_interpretation,
+                        "source_crs": "EPSG:4326",
+                        "analysis_crs": f"EPSG:{utm_epsg}",
                         "review_verdict": review_label,
-                        "legal_status": "Potential overlap requiring review (No automatic eviction judgment)"
+                        "legal_status": "Potential overlap — verification required (Officer determination required; not a judicial finding)"
                     }
                 })
 
@@ -280,7 +331,7 @@ def analyze_encroachments(
 
     return {
         "type": "FeatureCollection",
-        "name": "cadastral_conflict_zones",
+        "name": "cadastral_corridor_review_zones",
         "features": conflict_features,
         "metadata": {
             "total_conflicts_detected": len(conflict_features),
@@ -288,6 +339,10 @@ def analyze_encroachments(
             "zero_area_touch_count": sum(1 for c in conflict_features if not c["properties"]["is_positive_area_overlap"]),
             "total_encroachment_sqm": round(total_encroachment_sqm, 2),
             "tested_buffer_meters": buffer_meters,
-            "disclaimer": "Analysis indicates spatial overlap against road reserve. Does not constitute a judicial eviction finding."
+            "geometry_interpretation": primary_interpretation,
+            "source_crs": "EPSG:4326",
+            "analysis_crs": f"EPSG:{utm_epsg}",
+            "road_source": road_source_meta.get("source_type", "DEMO_OR_EMBEDDED") if road_source_meta else "DEMO_OR_EMBEDDED",
+            "disclaimer": "Analysis indicates geometric overlap against road/corridor buffer. Does not constitute an illegal encroachment or judicial finding."
         }
     }

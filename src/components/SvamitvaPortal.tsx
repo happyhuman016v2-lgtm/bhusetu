@@ -14,15 +14,21 @@ import {
   testWFSConnection,
   loadDemoSurvey,
   clearSurveySource,
+  fetchRoadSourceState,
+  uploadRoadGeoJSON,
+  loadDemoRoad,
+  clearRoadSource,
   SurveySourceMetadata,
   SurveyUploadResponse,
 } from '../services/svamitvaService';
+import { RoadSourceMetadata } from '../types';
 import { RoRDossierModal } from './RoRDossierModal';
 import {
   ShieldAlert,
   Sliders,
   CheckCircle2,
   FileText,
+
   MapPin,
   Search,
   Building2,
@@ -100,19 +106,87 @@ export const SvamitvaPortal: React.FC<Props> = ({
   const [isDossierModalOpen, setIsDossierModalOpen] = useState<boolean>(false);
   const [copiedULPIN, setCopiedULPIN] = useState<boolean>(false);
 
+  // Road Source State
+  const [roadMeta, setRoadMeta] = useState<RoadSourceMetadata | null>(null);
+  const [roadFile, setRoadFile] = useState<File | null>(null);
+  const [roadSupplierInput, setRoadSupplierInput] = useState<string>('');
+  const [roadNameInput, setRoadNameInput] = useState<string>('');
+  const [isUploadingRoad, setIsUploadingRoad] = useState<boolean>(false);
+  const [uploadRoadResult, setUploadRoadResult] = useState<any | null>(null);
+  const [uploadRoadError, setUploadRoadError] = useState<string | null>(null);
+
   // Load Source Metadata on mount
   const loadSourceState = async () => {
     try {
       const res = await fetchSurveySourceState();
-      setSourceMeta(res.metadata);
+      if (res?.metadata) setSourceMeta(res.metadata);
     } catch (e) {
       console.warn('Failed to fetch survey source state:', e);
     }
   };
 
+  const loadRoadState = async () => {
+    try {
+      const res = await fetchRoadSourceState();
+      if (res?.metadata) setRoadMeta(res.metadata);
+    } catch (e) {
+      console.warn('Failed to fetch road source state:', e);
+    }
+  };
+
   useEffect(() => {
     loadSourceState();
+    loadRoadState();
   }, []);
+
+  const handleRoadFileUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!roadFile) {
+      setUploadRoadError('Please select a Road GeoJSON file.');
+      return;
+    }
+    setIsUploadingRoad(true);
+    setUploadRoadError(null);
+    setUploadRoadResult(null);
+
+    try {
+      const result = await uploadRoadGeoJSON(
+        roadFile,
+        roadSupplierInput || 'Road Authority / Field Survey',
+        roadNameInput || undefined
+      );
+      setUploadRoadResult(result);
+      await loadRoadState();
+      if (onParcelsUpdated) {
+        onParcelsUpdated();
+      }
+    } catch (err: any) {
+      setUploadRoadError(err.message || 'Road GeoJSON upload failed.');
+    } finally {
+      setIsUploadingRoad(false);
+    }
+  };
+
+  const handleLoadDemoRoad = async () => {
+    try {
+      await loadDemoRoad();
+      await loadRoadState();
+      if (onParcelsUpdated) onParcelsUpdated();
+    } catch (err: any) {
+      alert(`Failed to load demo road: ${err.message}`);
+    }
+  };
+
+  const handleClearRoad = async () => {
+    try {
+      await clearRoadSource();
+      await loadRoadState();
+      if (onParcelsUpdated) onParcelsUpdated();
+    } catch (err: any) {
+      alert(`Failed to clear road source: ${err.message}`);
+    }
+  };
+
 
   // Handlers for Survey Ingestion
   const handleSurveyFileUpload = async (e: React.FormEvent) => {
@@ -654,6 +728,144 @@ export const SvamitvaPortal: React.FC<Props> = ({
             )}
           </div>
 
+          {/* ROAD SOURCE INGESTION & MANAGEMENT CARD */}
+          <div className="bg-white p-4 rounded-2xl border border-[#E7DFD5] shadow-2xs space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-[#23201F] flex items-center gap-1.5">
+                <Compass className="w-4 h-4 text-slate-700" />
+                Active Road &amp; Corridor Source State
+              </span>
+              <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                roadMeta?.state === 'IMPORTED_ROAD' || roadMeta?.state === 'PUBLIC_VECTOR_ROAD'
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : roadMeta?.state === 'SYNTHETIC_DEMO_ROAD'
+                  ? 'bg-amber-100 text-amber-800'
+                  : 'bg-gray-100 text-gray-700'
+              }`}>
+                {roadMeta?.state || 'SYNTHETIC_DEMO_ROAD'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-[11px] bg-[#FAF7F2] p-2.5 rounded-xl border border-[#E7DFD5]">
+              <div>
+                <span className="text-gray-400 block text-[10px]">Road Source Type:</span>
+                <span className="font-bold text-[#23201F]">{roadMeta?.source_name || 'Demo Road Geometry'}</span>
+              </div>
+              <div>
+                <span className="text-gray-400 block text-[10px]">Geometry Interpretation:</span>
+                <span className="font-mono font-bold text-blue-700">
+                  {roadMeta?.geometry_interpretation === 'CENTERLINE'
+                    ? 'CENTERLINE (Buffer from centreline)'
+                    : 'ROAD BOUNDARY (Corridor polygon)'}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-400 block text-[10px]">Supplier / Origin:</span>
+                <span className="text-gray-700 truncate block">
+                  {roadMeta?.supplier || 'Synthetic Demonstration'}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-400 block text-[10px]">Features Count:</span>
+                <span className="font-mono font-bold text-gray-800">{roadMeta?.total_features ?? 1} Features</span>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 text-[10px] text-slate-700">
+              <strong>Road Provenance: </strong>
+              {roadMeta?.disclaimer || 'SOURCE: SYNTHETIC DEMONSTRATION — Demo Road Geometry.'}
+            </div>
+
+            {/* Ingest Road GeoJSON Form */}
+            <form onSubmit={handleRoadFileUpload} className="space-y-2.5 text-xs pt-1 border-t border-gray-100">
+              <span className="font-bold text-[11px] text-gray-700 block">
+                Ingest Road / Corridor GeoJSON (LineString / Polygon)
+              </span>
+              <div>
+                <input
+                  type="file"
+                  accept=".geojson,.json"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      setRoadFile(e.target.files[0]);
+                    }
+                  }}
+                  className="w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-700 file:text-white hover:file:bg-slate-800 file:cursor-pointer cursor-pointer border border-[#E7DFD5] p-1.5 rounded-xl bg-[#FAF7F2]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Road Name (Optional)</label>
+                  <input
+                    type="text"
+                    value={roadNameInput}
+                    onChange={(e) => setRoadNameInput(e.target.value)}
+                    placeholder="e.g. Rampur Main Arterial Track"
+                    className="w-full p-2 bg-[#FAF7F2] border border-[#E7DFD5] rounded-xl text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Supplier / Agency</label>
+                  <input
+                    type="text"
+                    value={roadSupplierInput}
+                    onChange={(e) => setRoadSupplierInput(e.target.value)}
+                    placeholder="e.g. OpenStreetMap / PWD"
+                    className="w-full p-2 bg-[#FAF7F2] border border-[#E7DFD5] rounded-xl text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="submit"
+                  disabled={isUploadingRoad || !roadFile}
+                  className="flex-1 py-2 px-3 rounded-xl bg-slate-800 text-white font-bold hover:bg-slate-900 transition-colors flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50 text-xs"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>{isUploadingRoad ? 'Validating & Ingesting...' : 'Ingest Road GeoJSON'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLoadDemoRoad}
+                  className="py-2 px-3 bg-gray-100 hover:bg-amber-50 text-gray-700 hover:text-amber-800 border border-gray-300 font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-1"
+                  title="Restore demo road geometry"
+                >
+                  <RefreshCw className="w-3 h-3 text-amber-600" />
+                  <span>Demo Road</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearRoad}
+                  className="py-2 px-2.5 bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-700 border border-gray-300 rounded-xl text-xs transition-colors"
+                  title="Clear road source"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                </button>
+              </div>
+            </form>
+
+            {uploadRoadError && (
+              <div className="bg-red-50 text-red-800 p-2.5 rounded-xl border border-red-200 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                <span>{uploadRoadError}</span>
+              </div>
+            )}
+
+            {uploadRoadResult && (
+              <div className="bg-emerald-50 text-emerald-900 p-3 rounded-xl border border-emerald-300 text-xs space-y-1">
+                <div className="flex items-center justify-between font-bold">
+                  <span>✓ Road Vector Ingested</span>
+                  <span className="font-mono text-[10px] bg-emerald-200 px-2 py-0.5 rounded-full">
+                    {uploadRoadResult.geometry_interpretation}
+                  </span>
+                </div>
+                <p className="text-[11px]">{uploadRoadResult.features_imported} road feature(s) active for metric corridor review.</p>
+              </div>
+            )}
+          </div>
+
           {/* Demo & Reset Controls */}
           <div className="bg-[#FAF7F2] p-3 rounded-2xl border border-[#E7DFD5] flex items-center justify-between gap-2">
             <button
@@ -790,19 +1002,30 @@ export const SvamitvaPortal: React.FC<Props> = ({
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Road overlap: </span>
+                    <span className="text-gray-500 block text-[10px] uppercase font-bold text-slate-600 mt-1">ROAD / CORRIDOR ANALYSIS</span>
                     {(() => {
                       const conflict = conflicts.find(
                         (c) => c.properties.encroaching_parcel_id === selectedParcel.id || c.properties.survey_plot_no === selectedParcel.properties.survey_plot_no
                       );
+                      const roadSourceName = roadMeta?.source_name || (roadMeta?.state === 'SYNTHETIC_DEMO_ROAD' ? 'Demo Road Geometry' : 'Vector Road');
                       if (conflict) {
                         return (
-                          <span className="font-bold text-red-600">
-                            {conflict.properties.overlap_area_sqm} m² (Requires Review)
-                          </span>
+                          <div className="space-y-0.5 mt-0.5 bg-red-50/70 p-1.5 rounded border border-red-200 text-[10px]">
+                            <div><span className="text-gray-500">Road Source: </span><span className="font-bold text-gray-800">{roadSourceName}</span></div>
+                            <div><span className="text-gray-500">Buffer: </span><span className="font-mono font-bold text-amber-700">{bufferDistance.toFixed(1)} m ({conflict.properties.geometry_interpretation || 'CENTERLINE'})</span></div>
+                            <div><span className="text-gray-500">Intersection: </span><span className="font-mono font-bold text-red-700">{conflict.properties.overlap_area_sqm} m²</span></div>
+                            <div><span className="text-gray-500">Affected: </span><span className="font-mono font-bold text-red-700">{conflict.properties.affected_pct ?? ((conflict.properties.overlap_area_sqm / (selectedParcel.properties.area_sq_mtr || 1)) * 100).toFixed(1)}%</span></div>
+                            <div className="text-red-800 font-bold mt-0.5">Status: Potential overlap — verification required</div>
+                          </div>
                         );
                       }
-                      return <span className="text-emerald-700 font-medium">None detected (0 m²)</span>;
+                      return (
+                        <div className="space-y-0.5 mt-0.5 bg-emerald-50/50 p-1.5 rounded border border-emerald-200 text-[10px]">
+                          <div><span className="text-gray-500">Road Source: </span><span className="font-semibold text-gray-700">{roadSourceName}</span></div>
+                          <div><span className="text-gray-500">Buffer: </span><span className="font-mono text-gray-700">{bufferDistance.toFixed(1)} m</span></div>
+                          <div className="text-emerald-700 font-bold">Status: No corridor overlap detected (0 m²)</div>
+                        </div>
+                      );
                     })()}
                   </div>
                   <div>

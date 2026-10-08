@@ -35,6 +35,10 @@ interface Props {
   bufferDistance?: number;
   onBufferDistanceChange?: (dist: number) => void;
   encroachmentResults?: EncroachmentAnalysisResult | null;
+  // Road & Source Props
+  roadFeatures?: any[];
+  roadMetadata?: any;
+  parcelMetadata?: any;
   // Layout
   isMapExpanded?: boolean;
   onToggleExpandMap?: () => void;
@@ -222,6 +226,9 @@ export const MapEngine: React.FC<Props> = ({
   bufferDistance = 3.0,
   onBufferDistanceChange,
   encroachmentResults = null,
+  roadFeatures = [],
+  roadMetadata = null,
+  parcelMetadata = null,
   isMapExpanded,
   onToggleExpandMap,
 }) => {
@@ -238,6 +245,9 @@ export const MapEngine: React.FC<Props> = ({
   const svamitvaParcelsRef = useRef<SvamitvaParcel[]>(svamitvaParcels);
   svamitvaParcelsRef.current = svamitvaParcels;
 
+  const roadFeaturesRef = useRef<any[]>(roadFeatures);
+  roadFeaturesRef.current = roadFeatures;
+
   const onSelectParcelRef = useRef(onSelectParcel);
   onSelectParcelRef.current = onSelectParcel;
 
@@ -253,8 +263,10 @@ export const MapEngine: React.FC<Props> = ({
   // Layer Visibility & Opacity
   const [satelliteOpacity, setSatelliteOpacity] = useState<number>(0.75);
   const [showBoundaries, setShowBoundaries] = useState<boolean>(true);
+  const [showRoads, setShowRoads] = useState<boolean>(true);
   const [showBuffers, setShowBuffers] = useState<boolean>(true);
   const [showEncroachments, setShowEncroachments] = useState<boolean>(true);
+
 
   // Hover Tooltip Popup for SVAMITVA
   const [hoveredFeature, setHoveredFeature] = useState<{
@@ -327,15 +339,30 @@ export const MapEngine: React.FC<Props> = ({
     async (map: maplibregl.Map, side: 'left' | 'right') => {
       const prefix = `${side}-`;
 
-      // 1. Parcels
+      // 1. Parcels (Render only true cadastral parcels; road features are in independent road-source)
       const svamitvaSource = map.getSource(`${prefix}svamitva-source`) as maplibregl.GeoJSONSource;
       if (svamitvaSource) {
         const isVis = showBoundaries && datasetMode === 'svamitva';
-        const fc = buildSvamitvaFeatures(isVis ? svamitvaParcelsRef.current : [], selectedSvamitvaParcelId);
+        // Filter out any parcel that is marked as Public Road so parcels and roads are strictly separate layers
+        const privateOnly = svamitvaParcelsRef.current.filter(
+          (p) => p.id !== 'svamitva-road-01' && p.properties?.land_type !== 'Public Road'
+        );
+        const fc = buildSvamitvaFeatures(isVis ? privateOnly : [], selectedSvamitvaParcelId);
         svamitvaSource.setData(fc as any);
       }
 
-      // 2. Dynamic Metric Buffer (Around selected parcel)
+      // 2. Independent Road Vector Source (Centerline & Boundary Corridors)
+      const roadSource = map.getSource(`${prefix}road-source`) as maplibregl.GeoJSONSource;
+      if (roadSource) {
+        const isRoadVis = showRoads && datasetMode === 'svamitva';
+        const roadFc: GeoJSON.FeatureCollection = {
+          type: 'FeatureCollection',
+          features: isRoadVis ? (roadFeaturesRef.current as any) : [],
+        };
+        roadSource.setData(roadFc as any);
+      }
+
+      // 3. Dynamic Metric Buffer (Around selected parcel)
       const bufferSource = map.getSource(`${prefix}svamitva-buffer-source`) as maplibregl.GeoJSONSource;
       if (bufferSource) {
         if (datasetMode === 'svamitva' && selectedSvamitvaParcelId && showBuffers) {
@@ -362,7 +389,7 @@ export const MapEngine: React.FC<Props> = ({
         }
       }
 
-      // 3. Encroachment Conflicts
+      // 4. Potential Corridor Review Zones (Amber/Red Highlight)
       const conflictSource = map.getSource(`${prefix}svamitva-conflict-source`) as maplibregl.GeoJSONSource;
       if (conflictSource) {
         if (datasetMode === 'svamitva' && encroachmentResults && showEncroachments) {
@@ -372,7 +399,7 @@ export const MapEngine: React.FC<Props> = ({
         }
       }
     },
-    [datasetMode, selectedSvamitvaParcelId, bufferDistance, encroachmentResults, showBoundaries, showBuffers, showEncroachments]
+    [datasetMode, selectedSvamitvaParcelId, bufferDistance, encroachmentResults, showBoundaries, showRoads, showBuffers, showEncroachments]
   );
 
   // Setup all layers once on map load
@@ -625,7 +652,57 @@ export const MapEngine: React.FC<Props> = ({
       },
     });
 
-    // 3. Encroachment Conflict Zones (Red Highlight)
+    // 3. Independent Road Vector Layers (Centreline & Boundary Corridors)
+    map.addSource(`${prefix}road-source`, {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+    });
+    // Road Corridor Boundary Fill (for Polygon/MultiPolygon roads)
+    map.addLayer({
+      id: `${prefix}road-boundary-fill`,
+      type: 'fill',
+      source: `${prefix}road-source`,
+      filter: ['in', ['geometry-type'], ['literal', ['Polygon', 'MultiPolygon']]],
+      paint: {
+        'fill-color': '#475569',
+        'fill-opacity': 0.75,
+      },
+    });
+    // Road Corridor Boundary Outline
+    map.addLayer({
+      id: `${prefix}road-boundary-line`,
+      type: 'line',
+      source: `${prefix}road-source`,
+      filter: ['in', ['geometry-type'], ['literal', ['Polygon', 'MultiPolygon']]],
+      paint: {
+        'line-color': '#1E293B',
+        'line-width': 2.5,
+      },
+    });
+    // Road Centerline Line & Casing (for LineString/MultiLineString roads)
+    map.addLayer({
+      id: `${prefix}road-centerline-casing`,
+      type: 'line',
+      source: `${prefix}road-source`,
+      filter: ['in', ['geometry-type'], ['literal', ['LineString', 'MultiLineString']]],
+      paint: {
+        'line-color': '#0F172A',
+        'line-width': 5.0,
+      },
+    });
+    map.addLayer({
+      id: `${prefix}road-centerline-line`,
+      type: 'line',
+      source: `${prefix}road-source`,
+      filter: ['in', ['geometry-type'], ['literal', ['LineString', 'MultiLineString']]],
+      paint: {
+        'line-color': '#F59E0B',
+        'line-width': 3.0,
+        'line-dasharray': [2, 1],
+      },
+    });
+
+    // 4. Potential Corridor Review Zones (Amber/Red Highlight)
     map.addSource(`${prefix}svamitva-conflict-source`, {
       type: 'geojson',
       data: { type: 'FeatureCollection', features: [] },
@@ -763,7 +840,9 @@ export const MapEngine: React.FC<Props> = ({
     selectedSvamitvaParcelId,
     bufferDistance,
     encroachmentResults,
+    roadFeatures,
     showBoundaries,
+    showRoads,
     showBuffers,
     showEncroachments,
   ]);
@@ -1152,12 +1231,16 @@ export const MapEngine: React.FC<Props> = ({
             <Layers className="w-3.5 h-3.5 text-[#C85A32]" />
             <span>
               {datasetMode === 'svamitva'
-                ? `SVAMITVA Abadi (${svamitvaParcels.length} Plots)`
+                ? parcelMetadata?.state === 'UPLOADED_FILE'
+                  ? `Imported Survey (${svamitvaParcels.filter(p => p.id !== 'svamitva-road-01' && p.properties?.land_type !== 'Public Road').length} Plots)`
+                  : `Survey Analysis Demo (${svamitvaParcels.filter(p => p.id !== 'svamitva-road-01' && p.properties?.land_type !== 'Public Road').length} Plots)`
                 : `TRACGIS Parcels (${parcels.length} Plots)`}
             </span>
           </span>
-          <span className="text-[10px] text-gray-400 font-normal">
-            {datasetMode === 'svamitva' ? 'UTM 44N' : 'EPSG:4326'}
+          <span className="text-[10px] text-gray-400 font-mono">
+            {datasetMode === 'svamitva'
+              ? encroachmentResults?.metadata?.analysis_crs || 'EPSG:32644'
+              : 'EPSG:4326'}
           </span>
         </div>
 
@@ -1166,19 +1249,27 @@ export const MapEngine: React.FC<Props> = ({
           <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 text-[11px] text-[#383432]">
             <div className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded-xs bg-[#0284C7] border border-black/20 shrink-0" />
-              <span>Residential Abadi</span>
+              <span>
+                {parcelMetadata?.state === 'UPLOADED_FILE'
+                  ? 'Imported Parcels'
+                  : 'Demo Parcels'}
+              </span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-xs bg-[#1E293B] border border-black/20 shrink-0" />
-              <span>Public Village Road</span>
+              <span className="w-3 h-3 rounded-xs bg-[#475569] border border-black/20 shrink-0" />
+              <span>
+                {roadMetadata?.state === 'IMPORTED_ROAD' || roadMetadata?.state === 'PUBLIC_VECTOR_ROAD'
+                  ? 'Vector Road Corridor'
+                  : 'Demo Road Geometry'}
+              </span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded-xs bg-[#F59E0B] border border-dashed border-amber-800 shrink-0" />
-              <span>Metric Buffer ({bufferDistance}m)</span>
+              <span>Corridor ({bufferDistance}m)</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded-xs bg-[#DC2626] border border-black/20 shrink-0" />
-              <span>Encroachment Zone</span>
+              <span>Potential Review Area</span>
             </div>
           </div>
         ) : (
@@ -1203,7 +1294,7 @@ export const MapEngine: React.FC<Props> = ({
         )}
 
         {/* Layer Checkboxes */}
-        <div className="pt-1.5 border-t border-gray-100 flex items-center justify-between text-[11px] text-[#6B6360]">
+        <div className="pt-1.5 border-t border-gray-100 flex items-center justify-between text-[11px] text-[#6B6360] flex-wrap gap-1">
           <label className="flex items-center gap-1 cursor-pointer">
             <input
               type="checkbox"
@@ -1211,8 +1302,19 @@ export const MapEngine: React.FC<Props> = ({
               onChange={(e) => setShowBoundaries(e.target.checked)}
               className="accent-[#C85A32]"
             />
-            <span className="font-medium text-[#23201F]">Boundaries</span>
+            <span className="font-medium text-[#23201F]">Parcels</span>
           </label>
+          {datasetMode === 'svamitva' && (
+            <label className="flex items-center gap-1 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showRoads}
+                onChange={(e) => setShowRoads(e.target.checked)}
+                className="accent-slate-700"
+              />
+              <span className="font-medium text-slate-800">Roads</span>
+            </label>
+          )}
           <label className="flex items-center gap-1 cursor-pointer">
             <input
               type="checkbox"
@@ -1230,7 +1332,7 @@ export const MapEngine: React.FC<Props> = ({
                 onChange={(e) => setShowEncroachments(e.target.checked)}
                 className="accent-red-600"
               />
-              <span className="font-medium text-red-700">Disputes</span>
+              <span className="font-medium text-red-700">Review</span>
             </label>
           )}
         </div>

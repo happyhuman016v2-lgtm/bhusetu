@@ -1,0 +1,14 @@
+{
+  "state": "SYNTHETIC_DEMO_ROAD",
+  "source_type": "SYNTHETIC_DEMO_ROAD",
+  "source_name": "Demo Road Geometry",
+  "dataset_id": "ds-demo-road-2026",
+  "original_filename": "demo_road.geojson",
+  "source_crs": "EPSG:4326",
+  "geometry_interpretation": "ROAD_BOUNDARY",
+  "supplier": "BhuSetu Cadastral Synthesizer (Demo Mode)",
+  "sha256_checksum": null,
+  "total_features": 1,
+  "imported_at": "2026-10-08T23:04:55.959781+00:00",
+  "disclaimer": "SOURCE: SYNTHETIC DEMONSTRATION \u2014 Demo Road Geometry. Not an actual village or public road."
+}

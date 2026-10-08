@@ -12,6 +12,9 @@ import { SVAMITVA_VILLAGE_PARCELS } from './data/svamitvaVillageData';
 import {
   fetchSvamitvaParcels,
   runEncroachmentAnalysis,
+  fetchRoadFeatures,
+  fetchRoadSourceState,
+  fetchSurveySourceState,
 } from './services/svamitvaService';
 import { analyzeParcelSpatialIntegrity } from './services/gisEngine';
 import { Navbar } from './components/Navbar';
@@ -54,6 +57,11 @@ export const App: React.FC = () => {
   const [encroachmentResults, setEncroachmentResults] = useState<EncroachmentAnalysisResult | null>(null);
   const [isAnalyzingEncroachments, setIsAnalyzingEncroachments] = useState<boolean>(false);
 
+  // Independent Road & Parcel Source State
+  const [roadFeatures, setRoadFeatures] = useState<any[]>([]);
+  const [roadMetadata, setRoadMetadata] = useState<any>(null);
+  const [parcelMetadata, setParcelMetadata] = useState<any>(null);
+
   // Initial audit log entries
   const [auditLogs, setAuditLogs] = useState<OfficerAuditEntry[]>([
     {
@@ -80,16 +88,31 @@ export const App: React.FC = () => {
     },
   ]);
 
-  // Load live SVAMITVA parcels & initial encroachment analysis from FastAPI backend
+  // Load live SVAMITVA parcels, roads, & metadata from FastAPI backend
   useEffect(() => {
     async function initSvamitva() {
       try {
-        const result = await fetchSvamitvaParcels();
-        if (result && result.features && result.features.length > 0) {
-          setSvamitvaParcels(result.features);
+        const [parcelRes, roadRes, roadMetaRes, surveyMetaRes] = await Promise.all([
+          fetchSvamitvaParcels().catch(() => null),
+          fetchRoadFeatures().catch(() => null),
+          fetchRoadSourceState().catch(() => null),
+          fetchSurveySourceState().catch(() => null),
+        ]);
+
+        if (parcelRes && parcelRes.features && parcelRes.features.length > 0) {
+          setSvamitvaParcels(parcelRes.features);
+        }
+        if (roadRes && roadRes.features) {
+          setRoadFeatures(roadRes.features);
+        }
+        if (roadMetaRes?.metadata) {
+          setRoadMetadata(roadMetaRes.metadata);
+        }
+        if (surveyMetaRes?.metadata) {
+          setParcelMetadata(surveyMetaRes.metadata);
         }
       } catch (e) {
-        console.warn('Initial SVAMITVA fetch error:', e);
+        console.warn('Initial SVAMITVA/Road fetch error:', e);
       }
       handleRunEncroachments(bufferDistance);
     }
@@ -120,12 +143,27 @@ export const App: React.FC = () => {
 
   const handleReloadSvamitva = async () => {
     try {
-      const result = await fetchSvamitvaParcels();
-      if (result && result.features) {
-        setSvamitvaParcels(result.features);
-        if (result.features.length > 0) {
-          setSelectedSvamitvaParcelId(result.features[0].id || result.features[0].properties?.property_id);
+      const [parcelRes, roadRes, roadMetaRes, surveyMetaRes] = await Promise.all([
+        fetchSvamitvaParcels().catch(() => null),
+        fetchRoadFeatures().catch(() => null),
+        fetchRoadSourceState().catch(() => null),
+        fetchSurveySourceState().catch(() => null),
+      ]);
+
+      if (parcelRes && parcelRes.features) {
+        setSvamitvaParcels(parcelRes.features);
+        if (parcelRes.features.length > 0) {
+          setSelectedSvamitvaParcelId(parcelRes.features[0].id || parcelRes.features[0].properties?.property_id);
         }
+      }
+      if (roadRes && roadRes.features) {
+        setRoadFeatures(roadRes.features);
+      }
+      if (roadMetaRes?.metadata) {
+        setRoadMetadata(roadMetaRes.metadata);
+      }
+      if (surveyMetaRes?.metadata) {
+        setParcelMetadata(surveyMetaRes.metadata);
       }
       handleRunEncroachments(bufferDistance);
     } catch (e) {
@@ -252,6 +290,9 @@ export const App: React.FC = () => {
             bufferDistance={bufferDistance}
             onBufferDistanceChange={setBufferDistance}
             encroachmentResults={encroachmentResults}
+            roadFeatures={roadFeatures}
+            roadMetadata={roadMetadata}
+            parcelMetadata={parcelMetadata}
             isMapExpanded={isMapExpanded}
             onToggleExpandMap={() => setIsMapExpanded(!isMapExpanded)}
           />
