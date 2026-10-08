@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+:root {
+  --terra-primary: #C85A32;
+  --terra-deep: #A94424;
+  --terra-light: #D4845C;
+  --bone: #FBF9F5;
+  --parchment: #F3ECE2;
+  --charcoal: #23201F;
+  --charcoal-soft: #383432;
+  --taupe: #E7DFD5;
+  --safe-green: #276728;
+  --safe-green-bg: #E8F5E9;
+  --warning-amber: #D97706;
+  --warning-amber-bg: #FEF3C7;
+  --critical-red: #B91C1C;
+  --critical-red-bg: #FEE2E2;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bone);
+  color: var(--charcoal);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--parchment);
+}
+::-webkit-scrollbar-thumb {
+  background: #C4BAB0;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #A94424;
+}
+
+/* Maplibre GL adjustments */
+.maplibregl-popup-content {
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  padding: 12px;
+  font-family: inherit;
+}
