@@ -1,6 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Parcel, PartitionResult, OfficerAuditEntry } from '../types';
 import { divideParcelEquitably } from '../services/partitionEngine';
+import {
+  AuthUser,
+  loginUser,
+  getStoredUser,
+  clearAuthToken,
+} from '../services/authApi';
+import {
+  LedgerBlock,
+  LedgerVerifyResult,
+  fetchLedgerBlocks,
+  verifyLedgerIntegrity,
+  issueDroneResurveyOrder,
+} from '../services/ledgerApi';
+import {
+  uploadRoRDocument,
+  OCRUploadResponse,
+} from '../services/ocrApi';
 import {
   ShieldAlert,
   CheckCircle2,
@@ -11,13 +28,21 @@ import {
   LogOut,
   Stamp,
   FileText,
-  Clock,
   KeyRound,
   Eye,
   Check,
   Building,
   Scale,
   Sparkles,
+  Upload,
+  Link as LinkIcon,
+  ShieldCheck,
+  RefreshCw,
+  Search,
+  Hash,
+  Clock,
+  Layers,
+  Award,
 } from 'lucide-react';
 
 interface Props {
@@ -39,18 +64,80 @@ export const OfficerPortal: React.FC<Props> = ({
   auditLogs,
   onAddAuditLog,
 }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [username, setUsername] = useState('officer_admin');
-  const [password, setPassword] = useState('BhuSetu@2026');
-  const [selectedNoticeParcel, setSelectedNoticeParcel] = useState<Parcel | null>(null);
+  // Authentication State
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(getStoredUser());
+  const [emailInput, setEmailInput] = useState('officer@bhusetu.gov.in');
+  const [passwordInput, setPasswordInput] = useState('Officer@BhuSetu2026!');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  // Statutory Officer Land Partition State
+  // Tabs: 'triage' | 'ocr' | 'ledger'
+  const [activeTab, setActiveTab] = useState<'triage' | 'ocr' | 'ledger'>('triage');
+
+  // Statutory Land Partition State
   const [officerDivisionMode, setOfficerDivisionMode] = useState<'EQUAL' | 'CUSTOM'>('EQUAL');
   const [officerShareholders, setOfficerShareholders] = useState([
     { id: 'off-p-1', name: 'Party 1 (Shareholder A)', sharePercent: 50 },
     { id: 'off-p-2', name: 'Party 2 (Shareholder B)', sharePercent: 50 },
   ]);
   const [computedOfficerPartition, setComputedOfficerPartition] = useState<PartitionResult | null>(null);
+
+  // Encroachment Notice Modal
+  const [selectedNoticeParcel, setSelectedNoticeParcel] = useState<Parcel | null>(null);
+
+  // OCR Upload State
+  const [ocrFile, setOcrFile] = useState<File | null>(null);
+  const [isUploadingOcr, setIsUploadingOcr] = useState(false);
+  const [ocrResult, setOcrResult] = useState<OCRUploadResponse | null>(null);
+  const [ocrError, setOcrError] = useState<string | null>(null);
+
+  // Immutable Ledger State
+  const [ledgerBlocks, setLedgerBlocks] = useState<LedgerBlock[]>([]);
+  const [verificationResult, setVerificationResult] = useState<LedgerVerifyResult | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  // Resurvey Order Modal State
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [orderParcelId, setOrderParcelId] = useState(selectedParcel.id);
+  const [orderULPIN, setOrderULPIN] = useState(selectedParcel.ulpin || 'UP1428SNMPGN101');
+  const [orderReason, setOrderReason] = useState(
+    'Discrepancy detected: Actual drone survey polygon reveals 42.5m² encroachment beyond legal registry setback.'
+  );
+  const [orderResolution, setOrderResolution] = useState('< 3cm GSD UAV Photogrammetry');
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [orderSuccessMsg, setOrderSuccessMsg] = useState<string | null>(null);
+
+  // Sync selected parcel
+  useEffect(() => {
+    if (selectedParcel) {
+      setOrderParcelId(selectedParcel.id);
+      setOrderULPIN(selectedParcel.ulpin || `UP1428SNMPGN${selectedParcel.id.slice(-3).toUpperCase()}`);
+    }
+  }, [selectedParcel]);
+
+  // Load ledger blocks on mount
+  useEffect(() => {
+    fetchLedgerBlocks().then((blocks) => setLedgerBlocks(blocks));
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    setIsLoggingIn(true);
+    try {
+      const response = await loginUser(emailInput, passwordInput);
+      setCurrentUser(response.user);
+    } catch (err: any) {
+      setAuthError(err.message || 'Login failed. Check credentials.');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleLogout = () => {
+    clearAuthToken();
+    setCurrentUser(null);
+  };
 
   const handleOfficerComputePartition = () => {
     const count = officerShareholders.length;
@@ -70,27 +157,14 @@ export const OfficerPortal: React.FC<Props> = ({
     setComputedOfficerPartition(result);
   };
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (
-      (username === 'officer_admin' || username === 'sih_judge_admin' || username === 'judge') &&
-      (password === 'BhuSetu@2026' || password === 'admin' || password === 'hackiton')
-    ) {
-      setIsAuthenticated(true);
-    } else {
-      // Allow demo bypass
-      setIsAuthenticated(true);
-    }
-  };
-
   const handleIssueNotice = (parcel: Parcel) => {
     onAddAuditLog({
-      officerName: parcel.nearestOffice.officerName,
-      designation: parcel.nearestOffice.designation,
+      officerName: currentUser?.full_name || parcel.nearestOffice.officerName,
+      designation: currentUser?.designation || parcel.nearestOffice.designation,
       action: 'DEMOLITION_NOTICE_ISSUED',
       parcelId: parcel.id,
       surveyNumber: parcel.surveyNumber,
-      details: `Form VII Statutory Show-Cause Notice issued for ${parcel.violations[0]?.encroachmentAreaSqm || 'buffer'} m² encroachment into ${parcel.bufferZone?.name || 'public buffer'}.`,
+      details: `Form VII Statutory Notice issued for ${parcel.violations[0]?.encroachmentAreaSqm || 'buffer'} m² encroachment into ${parcel.bufferZone?.name || 'public buffer'}.`,
     });
     setSelectedNoticeParcel(parcel);
   };
@@ -98,8 +172,8 @@ export const OfficerPortal: React.FC<Props> = ({
   const handleApproveSubdivision = (partition: PartitionResult) => {
     onApprovePartition(partition);
     onAddAuditLog({
-      officerName: selectedParcel.nearestOffice.officerName,
-      designation: selectedParcel.nearestOffice.designation,
+      officerName: currentUser?.full_name || selectedParcel.nearestOffice.officerName,
+      designation: currentUser?.designation || selectedParcel.nearestOffice.designation,
       action: 'PARTITION_MUTATION_APPROVED',
       parcelId: partition.parcelId,
       surveyNumber: selectedParcel.surveyNumber,
@@ -107,52 +181,170 @@ export const OfficerPortal: React.FC<Props> = ({
     });
   };
 
-  // If not logged in, show Auth Gate
-  if (!isAuthenticated) {
+  // OCR Upload Handler
+  const handleOcrFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    setOcrFile(file);
+    setOcrError(null);
+    setIsUploadingOcr(true);
+
+    try {
+      const result = await uploadRoRDocument(file);
+      setOcrResult(result);
+      if (result.spatial_match?.parcel_id) {
+        onSelectParcel(result.spatial_match.parcel_id);
+      }
+    } catch (err: any) {
+      setOcrError(err.message || 'Failed to process document OCR.');
+    } finally {
+      setIsUploadingOcr(false);
+    }
+  };
+
+  // Ledger Verification Handler
+  const handleVerifyLedger = async () => {
+    setIsVerifying(true);
+    try {
+      const result = await verifyLedgerIntegrity();
+      setVerificationResult(result);
+      const blocks = await fetchLedgerBlocks();
+      setLedgerBlocks(blocks);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  // Issue Drone Resurvey Order
+  const handleDispatchResurveyOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingOrder(true);
+    setOrderSuccessMsg(null);
+
+    try {
+      const newBlock = await issueDroneResurveyOrder({
+        parcel_id: orderParcelId,
+        ulpin: orderULPIN,
+        discrepancy_reason: orderReason,
+        target_accuracy: orderResolution,
+        statutory_clause: 'Uttar Pradesh Revenue Code 2006 (Sec 67-A) / SVAMITVA Directive',
+      });
+
+      setOrderSuccessMsg(
+        `Order cryptographically sealed in Block #${newBlock.index} (SHA-256: ${newBlock.hash.slice(0, 16)}...)`
+      );
+
+      // Refresh blocks
+      const blocks = await fetchLedgerBlocks();
+      setLedgerBlocks(blocks);
+
+      // Add to audit log
+      onAddAuditLog({
+        officerName: currentUser?.full_name || 'Revenue Officer',
+        designation: currentUser?.designation || 'Tahsildar',
+        action: 'DRONE_RESURVEY_ORDERED',
+        parcelId: orderParcelId,
+        surveyNumber: selectedParcel.surveyNumber,
+        details: `Statutory UAV Drone Resurvey ordered for ${orderULPIN}. Sealed in ledger Block #${newBlock.index}.`,
+      });
+
+      setTimeout(() => {
+        setShowOrderModal(false);
+        setOrderSuccessMsg(null);
+      }, 2500);
+    } catch (err: any) {
+      alert(`Order dispatch error: ${err.message}`);
+    } finally {
+      setIsSubmittingOrder(false);
+    }
+  };
+
+  // IF NOT AUTHENTICATED: Show GovTech RBAC Login Gate
+  if (!currentUser) {
     return (
-      <div className="bg-white border border-[#E7DFD5] rounded-2xl p-6 shadow-sm max-w-md mx-auto my-8">
-        <div className="text-center space-y-2 mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-[#C85A32]/10 border border-[#C85A32]/20 flex items-center justify-center text-[#C85A32] mx-auto">
+      <div className="bg-white border border-[#E7DFD5] rounded-3xl p-6 shadow-sm max-w-md mx-auto my-6 space-y-5">
+        <div className="text-center space-y-2">
+          <div className="w-14 h-14 rounded-2xl bg-[#C85A32]/10 border border-[#C85A32]/30 flex items-center justify-center text-[#C85A32] mx-auto shadow-2xs">
             <Lock className="w-7 h-7" />
           </div>
-          <h2 className="text-lg font-bold text-[#23201F]">Statutory Revenue Officer Login</h2>
+          <h2 className="text-lg font-black text-[#23201F]">Revenue Officer Authentication</h2>
           <p className="text-xs text-[#6B6360]">
-            Restricted access for Tahsildars, Sub-Registrars, and SIH/HackITon Evaluation Judges
+            Bcrypt + JWT Secured Role-Based Access Control (RBAC) Gate
           </p>
         </div>
 
+        {authError && (
+          <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded-xl text-xs flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
+            <span>{authError}</span>
+          </div>
+        )}
+
         <form onSubmit={handleLogin} className="space-y-3.5">
           <div>
-            <label className="block text-xs font-semibold text-[#23201F] mb-1">Officer Username</label>
+            <label className="block text-xs font-bold text-[#23201F] mb-1">
+              Official Gov Email ID
+            </label>
             <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-3 py-2 bg-[#FAF7F2] border border-[#E7DFD5] rounded-lg text-xs font-medium text-[#23201F] focus:outline-none focus:border-[#C85A32]"
+              type="email"
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+              className="w-full px-3 py-2 bg-[#FAF7F2] border border-[#E7DFD5] rounded-xl text-xs font-medium text-[#23201F] focus:outline-none focus:border-[#C85A32]"
+              placeholder="officer@bhusetu.gov.in"
+              required
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#23201F] mb-1">Security Key / Password</label>
+            <label className="block text-xs font-bold text-[#23201F] mb-1">
+              Statutory Password
+            </label>
             <input
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 bg-[#FAF7F2] border border-[#E7DFD5] rounded-lg text-xs font-medium text-[#23201F] focus:outline-none focus:border-[#C85A32]"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              className="w-full px-3 py-2 bg-[#FAF7F2] border border-[#E7DFD5] rounded-xl text-xs font-medium text-[#23201F] focus:outline-none focus:border-[#C85A32]"
+              required
             />
           </div>
 
-          <div className="bg-[#FAF7F2] p-2.5 rounded-lg border border-[#E7DFD5] text-[11px] text-[#6B6360] flex items-center gap-2">
-            <KeyRound className="w-4 h-4 text-[#C85A32] shrink-0" />
-            <span>Demo: <strong>officer_admin</strong> / <strong>BhuSetu@2026</strong></span>
+          {/* Quick Demo Credential Pills */}
+          <div className="bg-[#FAF7F2] p-3 rounded-xl border border-[#E7DFD5] space-y-1.5 text-[11px] text-[#6B6360]">
+            <span className="font-bold text-[#23201F] block flex items-center gap-1">
+              <KeyRound className="w-3.5 h-3.5 text-[#C85A32]" />
+              Quick Login Demo Profiles:
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmailInput('officer@bhusetu.gov.in');
+                  setPasswordInput('Officer@BhuSetu2026!');
+                }}
+                className="px-2 py-1 rounded bg-white border border-[#E7DFD5] font-semibold text-[#23201F] hover:bg-gray-100 transition-colors"
+              >
+                Tahsildar (SDM)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmailInput('patwari@bhusetu.gov.in');
+                  setPasswordInput('Patwari@BhuSetu2026!');
+                }}
+                className="px-2 py-1 rounded bg-white border border-[#E7DFD5] font-semibold text-[#23201F] hover:bg-gray-100 transition-colors"
+              >
+                Patwari (RI)
+              </button>
+            </div>
           </div>
 
           <button
             type="submit"
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#C85A32] text-white hover:bg-[#A94424] transition-colors text-xs font-bold shadow-sm"
+            disabled={isLoggingIn}
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#C85A32] text-white hover:bg-[#A94424] transition-colors text-xs font-bold shadow-sm disabled:opacity-50"
           >
             <LogIn className="w-4 h-4" />
-            <span>Unlock Statutory Officer Console</span>
+            <span>{isLoggingIn ? 'Authenticating with Bcrypt...' : 'Unlock Officer Console'}</span>
           </button>
         </form>
       </div>
@@ -165,460 +357,557 @@ export const OfficerPortal: React.FC<Props> = ({
   return (
     <div className="space-y-4">
       {/* Officer Header Card */}
-      <div className="bg-[#23201F] text-white rounded-xl p-4 shadow-sm flex items-center justify-between gap-4">
+      <div className="bg-[#23201F] text-white rounded-2xl p-4 shadow-sm flex items-center justify-between gap-4 border border-[#383432]">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#C85A32] flex items-center justify-center text-white shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-[#C85A32] flex items-center justify-center text-white shrink-0 shadow-xs">
             <Building className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-bold">{selectedParcel.nearestOffice.officerName}</h2>
-              <span className="text-[10px] bg-[#276728] text-white px-2 py-0.5 rounded-full font-semibold">
-                Authorized Revenue Officer
+              <h2 className="text-sm font-bold">{currentUser.full_name}</h2>
+              <span className="text-[10px] bg-[#276728] text-white px-2 py-0.5 rounded-full font-bold">
+                Badge: {currentUser.badge_id || 'REV-OFF-UP-042'}
               </span>
             </div>
             <p className="text-xs text-gray-300 mt-0.5">
-              {selectedParcel.nearestOffice.designation} • {selectedParcel.nearestOffice.jurisdiction}
+              {currentUser.designation} • {currentUser.jurisdiction}
             </p>
           </div>
         </div>
 
         <button
-          onClick={() => setIsAuthenticated(false)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold text-gray-300 hover:text-white transition-colors"
+          onClick={handleLogout}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-gray-300 hover:text-white transition-colors"
         >
           <LogOut className="w-3.5 h-3.5" />
           <span>Exit Console</span>
         </button>
       </div>
 
-      {/* Triage Summary Counters */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white p-3 rounded-xl border border-[#E7DFD5] shadow-2xs">
-          <p className="text-[11px] text-[#6B6360] font-semibold uppercase">Pending Partition Petitions</p>
-          <p className="text-xl font-bold text-[#2563EB] mt-1">{pendingPartitions.length}</p>
-          <p className="text-[10px] text-[#6B6360] mt-0.5">Citizen Division Submissions</p>
-        </div>
+      {/* Navigation Sub-Tabs */}
+      <div className="flex items-center gap-1 bg-[#E7DFD5] p-1 rounded-xl text-xs font-bold text-[#383432]">
+        <button
+          onClick={() => setActiveTab('triage')}
+          className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all ${
+            activeTab === 'triage'
+              ? 'bg-[#23201F] text-white shadow-xs'
+              : 'hover:bg-white/40'
+          }`}
+        >
+          Triage & Disputes
+        </button>
 
-        <div className="bg-white p-3 rounded-xl border border-[#E7DFD5] shadow-2xs">
-          <p className="text-[11px] text-[#6B6360] font-semibold uppercase">Buffer Encroachment Flags</p>
-          <p className="text-xl font-bold text-[#B91C1C] mt-1">{criticalParcels.length}</p>
-          <p className="text-[10px] text-[#6B6360] mt-0.5">Waterbody FTL & Setback Violations</p>
-        </div>
+        <button
+          onClick={() => setActiveTab('ocr')}
+          className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all flex items-center justify-center gap-1 ${
+            activeTab === 'ocr'
+              ? 'bg-[#23201F] text-white shadow-xs'
+              : 'hover:bg-white/40 text-[#C85A32]'
+          }`}
+        >
+          <Upload className="w-3.5 h-3.5" />
+          <span>RoR OCR Digitizer</span>
+        </button>
 
-        <div className="bg-white p-3 rounded-xl border border-[#E7DFD5] shadow-2xs">
-          <p className="text-[11px] text-[#6B6360] font-semibold uppercase">Survey Discrepancy Cases</p>
-          <p className="text-xl font-bold text-[#D97706] mt-1">{warningParcels.length}</p>
-          <p className="text-[10px] text-[#6B6360] mt-0.5">RoR vs GIS Area Mismatch</p>
-        </div>
+        <button
+          onClick={() => setActiveTab('ledger')}
+          className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all flex items-center justify-center gap-1 ${
+            activeTab === 'ledger'
+              ? 'bg-[#23201F] text-white shadow-xs'
+              : 'hover:bg-white/40 text-emerald-800'
+          }`}
+        >
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+          <span>Immutable Ledger ({ledgerBlocks.length})</span>
+        </button>
       </div>
 
-      {/* SECTION 1: Pending Civil Land Partition Mutations */}
-      <div className="bg-white border border-[#E7DFD5] rounded-xl p-4 shadow-xs space-y-3">
-        <div className="flex items-center justify-between border-b border-[#E7DFD5] pb-2.5">
-          <div className="flex items-center gap-2">
-            <Stamp className="w-4 h-4 text-[#2563EB]" />
-            <h3 className="font-bold text-xs text-[#23201F] uppercase tracking-wider">
-              Land Partition & Sub-Division Mutation Queue ({pendingPartitions.length})
-            </h3>
+      {/* ===================== TAB 1: TRIAGE & DISPUTES ===================== */}
+      {activeTab === 'triage' && (
+        <div className="space-y-4">
+          {/* Triage Summary Counters */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-white p-3 rounded-xl border border-[#E7DFD5] shadow-2xs">
+              <p className="text-[11px] text-[#6B6360] font-semibold uppercase">Pending Partition Petitions</p>
+              <p className="text-xl font-bold text-[#2563EB] mt-1">{pendingPartitions.length}</p>
+              <p className="text-[10px] text-[#6B6360] mt-0.5">Citizen Division Submissions</p>
+            </div>
+
+            <div className="bg-white p-3 rounded-xl border border-[#E7DFD5] shadow-2xs">
+              <p className="text-[11px] text-[#6B6360] font-semibold uppercase">Buffer Encroachments</p>
+              <p className="text-xl font-bold text-[#B91C1C] mt-1">{criticalParcels.length}</p>
+              <p className="text-[10px] text-[#6B6360] mt-0.5">Waterbody FTL & Setback Violations</p>
+            </div>
+
+            <div className="bg-white p-3 rounded-xl border border-[#E7DFD5] shadow-2xs">
+              <p className="text-[11px] text-[#6B6360] font-semibold uppercase">Immutable Orders</p>
+              <p className="text-xl font-bold text-[#276728] mt-1">{ledgerBlocks.length}</p>
+              <p className="text-[10px] text-[#6B6360] mt-0.5">Cryptographically Sealed</p>
+            </div>
           </div>
-          <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium">
-            Section 131 Land Revenue Code
-          </span>
-        </div>
 
-        {pendingPartitions.length === 0 ? (
-          <div className="text-center py-6 text-xs text-[#6B6360] bg-[#FAF7F2] rounded-lg border border-[#E7DFD5]">
-            <p>No pending partition applications in the queue.</p>
-            <p className="text-[11px] mt-1 text-[#C85A32]">
-              Tip: Switch to Citizen Portal → click "Suggest Even Divide" → "Submit Partition Plan for Official Mutation".
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {pendingPartitions.map((p) => {
-              const targetParcel = parcels.find((item) => item.id === p.parcelId) || selectedParcel;
-              return (
-                <div key={p.id} className="bg-[#FAF7F2] border border-[#E7DFD5] rounded-xl p-3.5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-bold text-xs text-[#23201F]">
-                        Survey No: {targetParcel.surveyNumber} ({targetParcel.village})
-                      </h4>
-                      <p className="text-[11px] text-[#6B6360]">
-                        ULPIN: {targetParcel.ulpin} • Total Geodesic Area: {p.totalAreaSqm} m²
-                      </p>
-                    </div>
-                    <span className="text-xs font-semibold bg-[#276728]/10 text-[#276728] px-2 py-0.5 rounded-full">
-                      {p.parityScore}% Parity Score
-                    </span>
-                  </div>
-
-                  {/* Sub-parcels preview */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {p.splits.map((s) => (
-                      <div key={s.shareholderId} className="bg-white p-2 rounded-lg border border-[#E7DFD5] text-[11px]">
-                        <p className="font-bold text-[#23201F] truncate">{s.shareholderName}</p>
-                        <p className="text-[#6B6360]">Sub-Survey: <strong>{s.subSurveyNo}</strong></p>
-                        <p className="text-[#276728] font-semibold">{s.areaSqm} m² ({s.sharePercentage}%)</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#E7DFD5]">
-                    <button
-                      onClick={() => onSelectParcel(targetParcel.id)}
-                      className="px-3 py-1.5 rounded-lg bg-white border border-[#E7DFD5] text-xs font-semibold text-[#23201F] hover:bg-gray-50 flex items-center gap-1"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>Inspect on Map</span>
-                    </button>
-                    <button
-                      onClick={() => handleApproveSubdivision(p)}
-                      className="px-3.5 py-1.5 rounded-lg bg-[#276728] text-white text-xs font-bold hover:bg-[#1E5220] transition-colors flex items-center gap-1.5 shadow-xs"
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Approve Mutation & Issue Sub-ULPINs</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* SECTION 1B: STATUTORY OFFICER CIVIL PARTITION TOOL (Even Split / Custom Percentage) */}
-      <div className="bg-white border border-[#E7DFD5] rounded-xl p-4 shadow-xs space-y-3">
-        <div className="flex items-center justify-between border-b border-[#E7DFD5] pb-2.5">
-          <div className="flex items-center gap-2">
-            <Scale className="w-4 h-4 text-[#C85A32]" />
+          {/* Quick Resurvey Issuance Trigger */}
+          <div className="bg-gradient-to-r from-[#23201F] to-[#383432] text-white p-3.5 rounded-2xl shadow-xs flex items-center justify-between gap-3">
             <div>
-              <h3 className="font-bold text-xs text-[#23201F] uppercase tracking-wider">
-                Statutory Land Partition & Division Tool (Survey No: {selectedParcel.surveyNumber})
-              </h3>
-              <p className="text-[11px] text-[#6B6360]">
-                Officer-directed sub-division: Select Even Split or custom percentage shares
+              <span className="text-[10px] uppercase font-bold text-amber-400 block tracking-wider">
+                Statutory Authority • Section 67-A
+              </span>
+              <p className="text-xs font-bold text-white mt-0.5">
+                Issue High-Resolution Drone Resurvey Order
+              </p>
+              <p className="text-[11px] text-gray-300">
+                Selected: Plot {selectedParcel.surveyNumber} ({selectedParcel.ulpin})
               </p>
             </div>
-          </div>
-          {selectedParcel.status !== 'CLEAN' && (
-            <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">
-              Discrepancy Rectification Recommended
-            </span>
-          )}
-        </div>
-
-        {/* Division Mode Switcher */}
-        <div className="grid grid-cols-2 gap-2 bg-[#FAF7F2] p-1.5 rounded-lg border border-[#E7DFD5]">
-          <button
-            type="button"
-            onClick={() => {
-              setOfficerDivisionMode('EQUAL');
-              const count = officerShareholders.length;
-              const eq = Math.round((100 / count) * 10) / 10;
-              setOfficerShareholders(
-                officerShareholders.map((s, i) => ({
-                  ...s,
-                  sharePercent: i === count - 1 ? 100 - eq * (count - 1) : eq,
-                }))
-              );
-            }}
-            className={`py-1.5 px-2 rounded-md text-xs font-bold transition-all ${
-              officerDivisionMode === 'EQUAL'
-                ? 'bg-[#C85A32] text-white shadow-2xs'
-                : 'text-[#6B6360] hover:text-[#23201F]'
-            }`}
-          >
-            ⚖️ Split Land Evenly ({Math.round(100 / officerShareholders.length)}% Each)
-          </button>
-          <button
-            type="button"
-            onClick={() => setOfficerDivisionMode('CUSTOM')}
-            className={`py-1.5 px-2 rounded-md text-xs font-bold transition-all ${
-              officerDivisionMode === 'CUSTOM'
-                ? 'bg-[#C85A32] text-white shadow-2xs'
-                : 'text-[#6B6360] hover:text-[#23201F]'
-            }`}
-          >
-            ⚙️ Custom Specified Percentages
-          </button>
-        </div>
-
-        {/* Shareholders Inputs */}
-        <div className="space-y-2">
-          {officerShareholders.map((person, idx) => (
-            <div key={person.id} className="flex items-center gap-2 bg-[#FAF7F2] p-2 rounded-lg border border-[#E7DFD5]">
-              <span className="w-5 h-5 rounded-full bg-[#23201F] text-white text-[10px] font-bold flex items-center justify-center shrink-0">
-                {idx + 1}
-              </span>
-              <input
-                type="text"
-                value={person.name}
-                onChange={(e) => {
-                  const updated = [...officerShareholders];
-                  updated[idx].name = e.target.value;
-                  setOfficerShareholders(updated);
-                }}
-                className="flex-1 bg-white border border-[#E7DFD5] rounded px-2 py-1 text-xs text-[#23201F] font-medium focus:outline-none"
-                placeholder={`Party ${idx + 1}`}
-              />
-              <div className="flex items-center gap-1">
-                {officerDivisionMode === 'CUSTOM' ? (
-                  <div className="flex items-center gap-0.5">
-                    <input
-                      type="number"
-                      min="1"
-                      max="99"
-                      value={person.sharePercent}
-                      onChange={(e) => {
-                        const val = parseFloat(e.target.value) || 0;
-                        const updated = [...officerShareholders];
-                        updated[idx].sharePercent = val;
-                        setOfficerShareholders(updated);
-                      }}
-                      className="w-14 bg-white border border-[#E7DFD5] rounded px-1.5 py-1 text-xs text-right font-bold text-[#23201F]"
-                    />
-                    <span className="text-xs font-bold text-[#6B6360]">%</span>
-                  </div>
-                ) : (
-                  <span className="text-xs font-bold text-[#23201F] w-12 text-right">
-                    {person.sharePercent}%
-                  </span>
-                )}
-                {officerShareholders.length > 2 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const updated = officerShareholders.filter((_, i) => i !== idx);
-                      const eq = Math.round((100 / updated.length) * 10) / 10;
-                      setOfficerShareholders(
-                        updated.map((s, i) => ({
-                          ...s,
-                          sharePercent: i === updated.length - 1 ? 100 - eq * (updated.length - 1) : eq,
-                        }))
-                      );
-                    }}
-                    className="text-gray-400 hover:text-red-500 text-xs px-1"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-
-          {/* Add Co-owner */}
-          {officerShareholders.length < 5 && (
             <button
-              type="button"
-              onClick={() => {
-                const next = officerShareholders.length + 1;
-                const updated = [...officerShareholders, { id: `off-p-${next}`, name: `Party ${next}`, sharePercent: 0 }];
-                const eq = Math.round((100 / updated.length) * 10) / 10;
-                setOfficerShareholders(
-                  updated.map((s, i) => ({
-                    ...s,
-                    sharePercent: i === updated.length - 1 ? 100 - eq * (updated.length - 1) : eq,
-                  }))
-                );
-              }}
-              className="text-[11px] text-[#C85A32] font-semibold hover:underline"
+              onClick={() => setShowOrderModal(true)}
+              className="px-3.5 py-2 bg-[#C85A32] hover:bg-[#a64420] text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shrink-0 shadow-sm"
             >
-              + Add Another Shareholder / Co-heir ({officerShareholders.length + 1})
+              <Stamp className="w-4 h-4" />
+              <span>Issue Order</span>
             </button>
-          )}
-        </div>
+          </div>
 
-        {/* Compute & Preview Partition Button */}
-        <div className="flex gap-2 pt-1">
-          <button
-            type="button"
-            onClick={handleOfficerComputePartition}
-            className="flex-1 py-2 px-3 rounded-lg bg-[#23201F] text-white hover:bg-[#383432] transition-colors text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Compute Geodesic Sub-Division</span>
-          </button>
-        </div>
-
-        {/* Computed Partition Approval Box */}
-        {computedOfficerPartition && (
-          <div className="bg-[#FAF7F2] border border-[#276728]/30 rounded-xl p-3 space-y-2.5">
-            <div className="flex items-center justify-between text-xs font-bold text-[#276728]">
-              <span>✓ Computed {computedOfficerPartition.splits.length} Sub-Parcels</span>
-              <span className="bg-[#276728]/10 px-2 py-0.5 rounded-full">
-                {computedOfficerPartition.parityScore}% Area Parity
+          {/* Critical Buffer Encroachment Enforcement Queue */}
+          <div className="bg-white border border-[#E7DFD5] rounded-xl p-4 shadow-xs space-y-3">
+            <div className="flex items-center justify-between border-b border-[#E7DFD5] pb-2.5">
+              <div className="flex items-center gap-2 text-[#B91C1C]">
+                <ShieldAlert className="w-4 h-4" />
+                <h3 className="font-bold text-xs uppercase tracking-wider text-[#23201F]">
+                  Critical Buffer Encroachment Queue ({criticalParcels.length})
+                </h3>
+              </div>
+              <span className="text-[10px] bg-red-100 text-red-800 px-2 py-0.5 rounded-full font-medium">
+                HYDRAA / Setback Violations
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              {computedOfficerPartition.splits.map((split) => (
+            <div className="space-y-2.5">
+              {criticalParcels.map((parcel) => (
                 <div
-                  key={split.shareholderId}
-                  className="bg-white p-2 rounded-lg border-l-4 border shadow-2xs text-[11px]"
-                  style={{ borderLeftColor: split.color }}
+                  key={parcel.id}
+                  className="bg-[#B91C1C]/5 border border-[#B91C1C]/25 rounded-xl p-3 flex items-center justify-between gap-3"
                 >
-                  <p className="font-bold text-[#23201F] truncate">{split.shareholderName}</p>
-                  <p className="text-[#6B6360]">Sub-Survey: <strong>{split.subSurveyNo}</strong></p>
-                  <p className="text-[#276728] font-bold">{split.areaSqm} m² ({split.sharePercentage}%)</p>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-xs text-[#23201F]">{parcel.surveyNumber}</span>
+                      <span className="text-[10px] bg-[#B91C1C] text-white px-2 py-0.2 rounded-full font-bold">
+                        Grade {parcel.trustGrade} ({parcel.trustScore}/100)
+                      </span>
+                    </div>
+                    <p className="text-xs text-[#383432] mt-0.5">{parcel.owner.name} • {parcel.village}</p>
+                    <p className="text-[11px] text-[#B91C1C] font-medium mt-1">
+                      {parcel.violations[0]?.title}: {parcel.violations[0]?.description}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => onSelectParcel(parcel.id)}
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-[#E7DFD5] text-xs font-semibold text-[#23201F] hover:bg-gray-50 flex items-center gap-1"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Inspect</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onSelectParcel(parcel.id);
+                        setOrderParcelId(parcel.id);
+                        setOrderULPIN(parcel.ulpin);
+                        setShowOrderModal(true);
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-[#23201F] text-white text-xs font-bold hover:bg-black transition-colors flex items-center gap-1.5 shadow-xs"
+                    >
+                      <Stamp className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Order Resurvey</span>
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================== TAB 2: ROR DOCUMENT OCR DIGITIZER ===================== */}
+      {activeTab === 'ocr' && (
+        <div className="space-y-4 animate-in fade-in duration-150">
+          {/* File Upload Box */}
+          <div className="bg-white border-2 border-dashed border-[#C85A32]/40 rounded-2xl p-6 text-center space-y-3 bg-[#FAF7F2]/50">
+            <div className="w-12 h-12 rounded-2xl bg-[#C85A32]/10 border border-[#C85A32]/30 flex items-center justify-center text-[#C85A32] mx-auto">
+              <Upload className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-[#23201F]">
+                Upload Physical RoR Extract (Khasra-Khatauni / Form 7-12)
+              </h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Supports PDF extracts, scanned TIFFs, and PNG/JPG camera photos
+              </p>
+            </div>
+
+            <label className="inline-flex items-center gap-2 px-4 py-2 bg-[#C85A32] text-white rounded-xl text-xs font-bold cursor-pointer hover:bg-[#a64420] transition-colors shadow-xs">
+              <FileText className="w-4 h-4" />
+              <span>{isUploadingOcr ? 'Preprocessing & Extracting...' : 'Select RoR Document'}</span>
+              <input
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg,.tiff"
+                onChange={handleOcrFileSelect}
+                className="hidden"
+                disabled={isUploadingOcr}
+              />
+            </label>
+
+            {ocrFile && (
+              <p className="text-xs font-mono text-gray-600">Selected: {ocrFile.name}</p>
+            )}
+          </div>
+
+          {ocrError && (
+            <div className="bg-red-50 p-3 rounded-xl border border-red-200 text-xs text-red-800 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{ocrError}</span>
+            </div>
+          )}
+
+          {/* OCR RESULTS: SIDE-BY-SIDE COMPARISON */}
+          {ocrResult && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[#23201F] flex items-center gap-1.5">
+                  <Scale className="w-4 h-4 text-[#C85A32]" />
+                  Uploaded OCR Record vs. Drone Cadastral Ground Truth
+                </span>
+                <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">
+                  OCR Confidence: {ocrResult.extracted_entities.ocr_confidence}%
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {/* Column 1: Uploaded RoR Record */}
+                <div className="bg-white p-4 rounded-2xl border border-[#E7DFD5] space-y-2.5 shadow-2xs">
+                  <div className="border-b border-gray-100 pb-2">
+                    <span className="text-[10px] uppercase font-bold text-gray-500 block">
+                      Uploaded Physical Record
+                    </span>
+                    <h4 className="font-bold text-[#23201F] text-sm">
+                      {ocrResult.extracted_entities.document_type}
+                    </h4>
+                  </div>
+
+                  <div className="space-y-1 text-gray-700">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Khasra / Plot:</span>
+                      <span className="font-bold text-[#23201F]">{ocrResult.extracted_entities.khasra_no}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Khatauni No:</span>
+                      <span className="font-mono font-semibold">{ocrResult.extracted_entities.khata_no}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Recorded Owner:</span>
+                      <span className="font-semibold">{ocrResult.extracted_entities.pattadar_names.join(', ')}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Recorded Legal Area:</span>
+                      <span className="font-mono font-bold text-blue-800">
+                        {ocrResult.extracted_entities.recorded_area_sqm} m²
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Mortgage Status:</span>
+                      <span className="text-red-700 font-semibold">{ocrResult.extracted_entities.mortgage_status}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Column 2: Linked Drone Ground Truth */}
+                {ocrResult.spatial_match ? (
+                  <div className="bg-white p-4 rounded-2xl border border-[#E7DFD5] space-y-2.5 shadow-2xs">
+                    <div className="border-b border-gray-100 pb-2">
+                      <span className="text-[10px] uppercase font-bold text-gray-500 block">
+                        Drone Cadastral Match
+                      </span>
+                      <h4 className="font-bold text-[#276728] text-sm flex items-center gap-1">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span>Plot {ocrResult.spatial_match.survey_plot_no} Verified</span>
+                      </h4>
+                    </div>
+
+                    <div className="space-y-1 text-gray-700">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Bhu-Aadhaar ULPIN:</span>
+                        <span className="font-mono font-bold text-[#C85A32]">{ocrResult.spatial_match.ulpin}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Surveyed Owner:</span>
+                        <span className="font-semibold">{ocrResult.spatial_match.owner_drone_survey}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Drone Ground Area:</span>
+                        <span className="font-mono font-bold text-[#276728]">
+                          {ocrResult.spatial_match.drone_measured_area_sqm} m²
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Area Mismatch:</span>
+                        <span
+                          className={`font-mono font-bold ${
+                            ocrResult.spatial_match.is_within_statutory_tolerance
+                              ? 'text-emerald-700'
+                              : 'text-red-700'
+                          }`}
+                        >
+                          {ocrResult.spatial_match.area_variance_pct > 0 ? '+' : ''}
+                          {ocrResult.spatial_match.area_variance_pct}% ({ocrResult.spatial_match.area_variance_sqm} m²)
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Statutory Status:</span>
+                        <span className="font-bold">
+                          {ocrResult.spatial_match.is_within_statutory_tolerance
+                            ? 'Within ±5% Tolerance'
+                            : 'Exceeds Statutory Cap'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {!ocrResult.spatial_match.is_within_statutory_tolerance && (
+                      <button
+                        onClick={() => {
+                          setOrderParcelId(ocrResult.spatial_match!.parcel_id);
+                          setOrderULPIN(ocrResult.spatial_match!.ulpin);
+                          setOrderReason(
+                            `OCR-to-Drone mismatch of ${ocrResult.spatial_match!.area_variance_pct}% exceeds statutory limit.`
+                          );
+                          setShowOrderModal(true);
+                        }}
+                        className="w-full mt-2 py-2 px-3 bg-[#B91C1C] text-white rounded-xl font-bold hover:bg-red-800 transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
+                      >
+                        <Stamp className="w-3.5 h-3.5" />
+                        <span>Order Drone Resurvey for Discrepancy</span>
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-[#FAF7F2] p-4 rounded-2xl border border-dashed border-gray-300 flex items-center justify-center text-center text-gray-500">
+                    No spatial drone parcel found for extracted Khasra number.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ===================== TAB 3: IMMUTABLE AUDIT LEDGER ===================== */}
+      {activeTab === 'ledger' && (
+        <div className="space-y-4 animate-in fade-in duration-150">
+          {/* Header Action Bar */}
+          <div className="bg-white p-4 rounded-2xl border border-[#E7DFD5] shadow-xs flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-bold text-sm text-[#23201F]">
+                  Cryptographic SHA-256 Resurvey Order Ledger
+                </h3>
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Immutable hash-chain recording all statutory drone resurvey mandates
+              </p>
+            </div>
 
             <button
-              type="button"
-              onClick={() => handleApproveSubdivision(computedOfficerPartition)}
-              className="w-full py-2 px-3 rounded-lg bg-[#276728] text-white hover:bg-[#1E5220] transition-colors text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs"
+              onClick={handleVerifyLedger}
+              disabled={isVerifying}
+              className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs disabled:opacity-50"
             >
-              <Check className="w-4 h-4" />
-              <span>Approve Partition Mutation & Issue Sub-ULPINs</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${isVerifying ? 'animate-spin' : ''}`} />
+              <span>{isVerifying ? 'Traversing Chain...' : 'Verify Cryptographic Integrity'}</span>
             </button>
           </div>
-        )}
-      </div>
 
-      {/* SECTION 2: Critical Buffer Encroachment Enforcement Queue */}
-      <div className="bg-white border border-[#E7DFD5] rounded-xl p-4 shadow-xs space-y-3">
-        <div className="flex items-center justify-between border-b border-[#E7DFD5] pb-2.5">
-          <div className="flex items-center gap-2 text-[#B91C1C]">
-            <ShieldAlert className="w-4 h-4" />
-            <h3 className="font-bold text-xs uppercase tracking-wider text-[#23201F]">
-              Critical Buffer Encroachment Enforcement Queue ({criticalParcels.length})
-            </h3>
-          </div>
-          <span className="text-[10px] bg-red-100 text-red-800 px-2 py-0.5 rounded-full font-medium">
-            HYDRAA / Setback Violations
-          </span>
-        </div>
-
-        <div className="space-y-2.5">
-          {criticalParcels.map((parcel) => (
+          {/* Verification Status Card */}
+          {verificationResult && (
             <div
-              key={parcel.id}
-              className="bg-[#B91C1C]/5 border border-[#B91C1C]/25 rounded-xl p-3 flex items-center justify-between gap-3"
+              className={`p-4 rounded-2xl border text-xs flex items-start gap-3 ${
+                verificationResult.is_valid
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                  : 'bg-red-50 border-red-300 text-red-900'
+              }`}
             >
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-xs text-[#23201F]">{parcel.surveyNumber}</span>
-                  <span className="text-[10px] bg-[#B91C1C] text-white px-2 py-0.2 rounded-full font-bold">
-                    Grade {parcel.trustGrade} ({parcel.trustScore}/100)
+              <Award className="w-6 h-6 shrink-0 text-emerald-700" />
+              <div className="space-y-1">
+                <p className="font-extrabold text-sm">
+                  {verificationResult.is_valid
+                    ? '✓ Ledger Integrity Cryptographically Certified'
+                    : '⚠ Ledger Tampering Detected!'}
+                </p>
+                <p className="text-[11px]">
+                  All {verificationResult.total_blocks} blocks verified from Genesis to Tip with zero hash chain breaks.
+                </p>
+                <div className="font-mono text-[10px] text-gray-700 pt-1 border-t border-black/10">
+                  Tip Hash: {verificationResult.tip_hash}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Interactive Block Chain List */}
+          <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
+            {ledgerBlocks.map((block) => (
+              <div
+                key={block.index}
+                className="bg-white rounded-2xl border border-[#E7DFD5] p-4 shadow-2xs space-y-2.5 relative"
+              >
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-lg bg-[#23201F] text-white font-mono font-bold text-[11px] flex items-center justify-center">
+                      #{block.index}
+                    </span>
+                    <span className="font-bold text-[#23201F]">
+                      {block.payload.type === 'GENESIS_ANCHOR'
+                        ? 'Genesis Root Anchor'
+                        : `Drone Resurvey Order (${block.payload.ulpin || block.ulpin})`}
+                    </span>
+                  </div>
+
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    <span>Hash Verified</span>
                   </span>
                 </div>
-                <p className="text-xs text-[#383432] mt-0.5">{parcel.owner.name} • {parcel.village}</p>
-                <p className="text-[11px] text-[#B91C1C] font-medium mt-1">
-                  {parcel.violations[0]?.title}: {parcel.violations[0]?.description}
+
+                <p className="text-xs text-[#383432]">
+                  {block.payload.discrepancy_reason || block.payload.memo}
                 </p>
-              </div>
 
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() => onSelectParcel(parcel.id)}
-                  className="px-2.5 py-1.5 rounded-lg bg-white border border-[#E7DFD5] text-xs font-semibold text-[#23201F] hover:bg-gray-50 flex items-center gap-1"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>Inspect</span>
-                </button>
-                <button
-                  onClick={() => handleIssueNotice(parcel)}
-                  className="px-3 py-1.5 rounded-lg bg-[#B91C1C] text-white text-xs font-bold hover:bg-[#991B1B] transition-colors flex items-center gap-1.5 shadow-xs"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>Issue Statutory Notice</span>
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+                <div className="grid grid-cols-2 gap-2 text-[10px] text-gray-500 bg-[#FAF7F2] p-2.5 rounded-xl border border-[#E7DFD5] font-mono">
+                  <div>
+                    <span className="block text-gray-400">Issuing Officer Badge:</span>
+                    <span className="font-bold text-[#23201F]">
+                      {block.payload.officer_badge_id || 'SYSTEM_GENESIS'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-gray-400">Timestamp (UTC):</span>
+                    <span className="text-[#23201F]">{block.timestamp}</span>
+                  </div>
+                </div>
 
-      {/* SECTION 3: Cryptographic Audit Trail */}
-      <div className="bg-white border border-[#E7DFD5] rounded-xl p-4 shadow-xs space-y-3">
-        <div className="flex items-center justify-between border-b border-[#E7DFD5] pb-2.5">
-          <div className="flex items-center gap-2">
-            <FileCheck className="w-4 h-4 text-[#276728]" />
-            <h3 className="font-bold text-xs text-[#23201F] uppercase tracking-wider">
-              Immutable Statutory Audit Trail (SHA-256 Hashes)
-            </h3>
-          </div>
-          <span className="text-[10px] bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">
-            Blockchain-Grade Tamper Proof
-          </span>
-        </div>
-
-        <div className="space-y-2 max-h-60 overflow-y-auto">
-          {auditLogs.map((log) => (
-            <div key={log.id} className="bg-[#FAF7F2] p-2.5 rounded-lg border border-[#E7DFD5] text-xs space-y-1 font-mono">
-              <div className="flex items-center justify-between text-[11px] text-[#6B6360]">
-                <span>{log.timestamp}</span>
-                <span className="font-bold text-[#C85A32]">{log.action}</span>
-              </div>
-              <p className="text-[#23201F] font-sans font-medium text-xs">{log.details}</p>
-              <div className="flex items-center justify-between text-[10px] text-gray-500 pt-1 border-t border-gray-200">
-                <span>Officer: {log.officerName}</span>
-                <span className="truncate max-w-[200px]" title={log.hash}>Hash: {log.hash.slice(0, 16)}...</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Statutory Demolition / Eviction Notice Modal */}
-      {selectedNoticeParcel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl overflow-hidden border border-[#E7DFD5]">
-            <div className="bg-[#B91C1C] text-white p-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ShieldAlert className="w-5 h-5 text-white" />
-                <div>
-                  <h3 className="font-bold text-sm">FORM VII: STATUTORY NOTICE OF REMOVAL & SHOW-CAUSE</h3>
-                  <p className="text-[10px] text-white/80">Issued under Section 14 Water Resources Act / HYDRAA Regulation</p>
+                {/* Hashes Ribbon */}
+                <div className="pt-1 border-t border-gray-100 space-y-1 font-mono text-[10px] text-gray-500">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-400 w-16 shrink-0">Prev Hash:</span>
+                    <span className="truncate max-w-[280px]" title={block.prev_hash}>
+                      {block.prev_hash}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-emerald-800 font-bold">
+                    <span className="text-gray-500 w-16 shrink-0">Block Hash:</span>
+                    <span className="truncate max-w-[280px]" title={block.hash}>
+                      {block.hash}
+                    </span>
+                  </div>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* STATUTORY RESURVEY ORDER MODAL */}
+      {showOrderModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-200 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div className="flex items-center gap-2">
+                <Stamp className="w-5 h-5 text-[#C85A32]" />
+                <h3 className="font-bold text-sm text-[#23201F]">
+                  Issue Statutory Drone Resurvey Order
+                </h3>
+              </div>
               <button
-                onClick={() => setSelectedNoticeParcel(null)}
-                className="text-white/80 hover:text-white text-lg px-2"
+                onClick={() => setShowOrderModal(false)}
+                className="text-gray-400 hover:text-gray-600 text-sm font-bold"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-4 space-y-3 text-xs text-[#23201F] bg-[#FBF9F5] font-mono leading-relaxed max-h-[60vh] overflow-y-auto">
-              <p className="font-bold">OFFICE OF THE TAHILDAR & EXECUTIVE MAGISTRATE</p>
-              <p>JURISDICTION: {selectedNoticeParcel.nearestOffice.jurisdiction}</p>
-              <p>DATE: {new Date().toLocaleDateString('en-IN')}</p>
-              <hr />
-              <p>TO: {selectedNoticeParcel.owner.name}</p>
-              <p>SUBJECT: Encroachment of {selectedNoticeParcel.violations[0]?.encroachmentAreaSqm} m² into Notified Waterbody / Buffer Line.</p>
-              <p>
-                TAKE NOTICE that spatial satellite survey and geodesic audit of Survey No. {selectedNoticeParcel.surveyNumber} (ULPIN: {selectedNoticeParcel.ulpin}) reveals unauthorized intrusion into the notified Full Tank Level / corridor.
-              </p>
-              <p>
-                You are hereby commanded to show cause within 7 (seven) days of receipt of this notice, failing which summary removal and demolition shall be carried out at your cost.
-              </p>
-              <p className="text-right mt-4 font-bold">
-                {selectedNoticeParcel.nearestOffice.officerName}<br />
-                {selectedNoticeParcel.nearestOffice.designation}
-              </p>
-            </div>
-
-            <div className="p-3 bg-[#FAF7F2] border-t border-[#E7DFD5] flex items-center justify-between">
-              <span className="text-[11px] text-[#6B6360]">Official Revenue Seal Affixed</span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => window.print()}
-                  className="px-3 py-1.5 rounded-lg bg-gray-200 text-xs font-semibold hover:bg-gray-300"
-                >
-                  Print Notice
-                </button>
-                <button
-                  onClick={() => setSelectedNoticeParcel(null)}
-                  className="px-3 py-1.5 rounded-lg bg-[#23201F] text-xs font-semibold text-white hover:bg-black"
-                >
-                  Close
-                </button>
+            {orderSuccessMsg ? (
+              <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-300 text-emerald-900 text-xs space-y-1">
+                <p className="font-bold flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>Order Cryptographically Sealed in Ledger</span>
+                </p>
+                <p className="text-[11px] font-mono">{orderSuccessMsg}</p>
               </div>
-            </div>
+            ) : (
+              <form onSubmit={handleDispatchResurveyOrder} className="space-y-3 text-xs">
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Target Bhu-Aadhaar ULPIN</label>
+                  <input
+                    type="text"
+                    value={orderULPIN}
+                    onChange={(e) => setOrderULPIN(e.target.value)}
+                    className="w-full px-3 py-2 bg-[#FAF7F2] border border-[#E7DFD5] rounded-xl font-mono font-bold text-[#23201F]"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Discrepancy / Resurvey Reason</label>
+                  <textarea
+                    rows={3}
+                    value={orderReason}
+                    onChange={(e) => setOrderReason(e.target.value)}
+                    className="w-full px-3 py-2 bg-[#FAF7F2] border border-[#E7DFD5] rounded-xl text-[#23201F]"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Target UAV Photogrammetry Resolution</label>
+                  <select
+                    value={orderResolution}
+                    onChange={(e) => setOrderResolution(e.target.value)}
+                    className="w-full px-3 py-2 bg-[#FAF7F2] border border-[#E7DFD5] rounded-xl text-[#23201F]"
+                  >
+                    <option value="< 3cm GSD UAV Photogrammetry">&lt; 3cm GSD (High-Density Abadi Setback)</option>
+                    <option value="< 5cm GSD Standard Drone">&lt; 5cm GSD (Standard SVAMITVA Flight)</option>
+                    <option value="Sub-Centimeter RTK-DGPS">Sub-Centimeter RTK-DGPS Ground Demarcation</option>
+                  </select>
+                </div>
+
+                <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 text-[11px] text-gray-600 space-y-1">
+                  <p>
+                    <strong>Issuing Officer:</strong> {currentUser.full_name} ({currentUser.badge_id})
+                  </p>
+                  <p>
+                    <strong>Statutory Seal:</strong> Under Section 67-A UP Revenue Code, this order will be appended as an immutable cryptographic block.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowOrderModal(false)}
+                    className="px-4 py-2 rounded-xl border border-gray-300 font-semibold text-gray-700 hover:bg-gray-100"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingOrder}
+                    className="px-4 py-2 rounded-xl bg-[#C85A32] text-white font-bold hover:bg-[#a64420] transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                  >
+                    <Stamp className="w-4 h-4" />
+                    <span>{isSubmittingOrder ? 'Sealing Block...' : 'Sign & Seal Order in Ledger'}</span>
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

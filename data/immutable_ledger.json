@@ -1,0 +1,76 @@
+[
+  {
+    "index": 0,
+    "timestamp": "2026-01-01T00:00:00Z",
+    "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "hash": "67ecfe991f4a445018aa1b6db9c154cbe446ac3fdb101daa6ebbea0cedcc6cf9",
+    "payload": {
+      "index": 0,
+      "order_id": "00000000-0000-0000-0000-000000000000",
+      "timestamp": "2026-01-01T00:00:00Z",
+      "type": "GENESIS_ANCHOR",
+      "issuing_authority": "Ministry of Panchayati Raj \u2022 Survey of India \u2022 DoLR",
+      "scheme": "SVAMITVA Large-Scale UAV Mapping",
+      "jurisdiction": "National Cadastral Trust Network",
+      "memo": "Genesis Root Anchor for BhuSetu Resurvey & Discrepancy Order Ledger"
+    }
+  },
+  {
+    "index": 1,
+    "timestamp": "2026-10-08T21:13:22.311050+00:00",
+    "order_id": "38bc270e-60cb-4eaf-a83d-cc2d9b836897",
+    "parcel_id": "svamitva-101",
+    "ulpin": "UP1428SNMPGNWJ",
+    "officer_badge_id": "REV-OFF-UP-042",
+    "prev_hash": "67ecfe991f4a445018aa1b6db9c154cbe446ac3fdb101daa6ebbea0cedcc6cf9",
+    "hash": "b6a2439baa8307baa860dd711f939551321f7263de19b2e7957e016d49240091",
+    "payload": {
+      "index": 1,
+      "order_id": "38bc270e-60cb-4eaf-a83d-cc2d9b836897",
+      "timestamp": "2026-10-08T21:13:22.311050+00:00",
+      "type": "DRONE_RESURVEY_STATUTORY_ORDER",
+      "parcel_id": "svamitva-101",
+      "ulpin": "UP1428SNMPGNWJ",
+      "officer_badge_id": "REV-OFF-UP-042",
+      "officer_name": "Thiru M. Shanmugavel",
+      "discrepancy_reason": "Encroachment of 42.5m2 onto road",
+      "target_accuracy": "< 3cm GSD UAV Photogrammetry",
+      "statutory_clause": "Uttar Pradesh Revenue Code 2006 (Sec 67-A) / SVAMITVA Directive",
+      "coordinates_centroid": [
+        80.943,
+        26.986
+      ],
+      "status": "ORDER_ACTIVE_DISPATCHED",
+      "action_mandate": "Direct Survey of India UAV Pilot Unit to conduct high-density sub-3cm drone flight over disputed boundary polygon."
+    }
+  },
+  {
+    "index": 2,
+    "timestamp": "2026-10-08T21:14:21.561652+00:00",
+    "order_id": "0c70eb5d-af32-4e49-a9e7-95b7f9452bd3",
+    "parcel_id": "svamitva-102",
+    "ulpin": "UP1428SNMPGNV5",
+    "officer_badge_id": "REV-OFF-UP-042",
+    "prev_hash": "b6a2439baa8307baa860dd711f939551321f7263de19b2e7957e016d49240091",
+    "hash": "1c36e022c358bacb750903f655614318a8e154100cb807df57b4c703cba15e07",
+    "payload": {
+      "index": 2,
+      "order_id": "0c70eb5d-af32-4e49-a9e7-95b7f9452bd3",
+      "timestamp": "2026-10-08T21:14:21.561652+00:00",
+      "type": "DRONE_RESURVEY_STATUTORY_ORDER",
+      "parcel_id": "svamitva-102",
+      "ulpin": "UP1428SNMPGNV5",
+      "officer_badge_id": "REV-OFF-UP-042",
+      "officer_name": "Thiru M. Shanmugavel, M.A.",
+      "discrepancy_reason": "Significant 6.2m road reserve buffer intrusion flagged by satellite photogrammetry",
+      "target_accuracy": "< 3cm GSD UAV Photogrammetry",
+      "statutory_clause": "Uttar Pradesh Revenue Code 2006 (Sec 67-A) / SVAMITVA Directive",
+      "coordinates_centroid": [
+        80.943,
+        26.986
+      ],
+      "status": "ORDER_ACTIVE_DISPATCHED",
+      "action_mandate": "Direct Survey of India UAV Pilot Unit to conduct high-density sub-3cm drone flight over disputed boundary polygon."
+    }
+  }
+]

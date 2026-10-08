@@ -1,0 +1,17 @@
+# BhuSetu Production Backend & GovTech Intelligence Platform Dependencies
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.9.0
+email-validator>=2.2.0
+bcrypt>=5.0.0
+pyjwt>=2.9.0
+slowapi>=0.1.10
+shapely>=2.0.0
+pyproj>=3.6.0
+numpy>=2.0.0
+pillow>=10.4.0
+opencv-python>=4.10.0
+pypdf>=5.0.0
+requests>=2.32.0
+httpx>=0.27.0
+python-multipart>=0.0.9

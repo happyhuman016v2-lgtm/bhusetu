@@ -116,7 +116,7 @@ export interface OfficerAuditEntry {
   timestamp: string;
   officerName: string;
   designation: string;
-  action: 'PARTITION_MUTATION_APPROVED' | 'DEMOLITION_NOTICE_ISSUED' | 'DISCREPANCY_REINSPECT_FLAGGED' | 'TRUST_SCORE_VERIFIED';
+  action: 'PARTITION_MUTATION_APPROVED' | 'DEMOLITION_NOTICE_ISSUED' | 'DISCREPANCY_REINSPECT_FLAGGED' | 'TRUST_SCORE_VERIFIED' | 'DRONE_RESURVEY_ORDERED';
   parcelId: string;
   surveyNumber: string;
   details: string;
