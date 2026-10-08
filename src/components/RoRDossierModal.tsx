@@ -8,6 +8,7 @@ import {
   fetchRoRDossier,
   fetchPropertyCard,
 } from '../services/svamitvaService';
+import { SignedEvidenceModal } from './SignedEvidenceModal';
 import {
   ShieldCheck,
   ShieldAlert,
@@ -48,6 +49,7 @@ export const RoRDossierModal: React.FC<Props> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [copiedULPIN, setCopiedULPIN] = useState<boolean>(false);
   const [activeView, setActiveView] = useState<'dossier' | 'propertyCard'>('dossier');
+  const [showSignedEvidenceModal, setShowSignedEvidenceModal] = useState<boolean>(false);
 
   useEffect(() => {
     if (!isOpen || !parcelId) return;
@@ -612,21 +614,30 @@ export const RoRDossierModal: React.FC<Props> = ({
               </div>
 
               {/* Action Ribbon */}
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
                 <button
                   onClick={onClose}
                   className="px-4 py-2 rounded-xl border border-gray-300 text-xs font-semibold text-gray-700 hover:bg-gray-100 transition-colors"
                 >
                   Close Dossier
                 </button>
-                <button
-                  onClick={() => setActiveView('propertyCard')}
-                  className="px-4 py-2 rounded-xl bg-[#C85A32] text-white text-xs font-bold hover:bg-[#a64420] transition-colors flex items-center gap-2 shadow-sm"
-                >
-                  <FileText className="w-4 h-4" />
-                  <span>Export RoR Title Certificate / Gharouni Card</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowSignedEvidenceModal(true)}
+                    className="px-3.5 py-2 rounded-xl bg-emerald-700 text-white text-xs font-bold hover:bg-emerald-800 transition-colors flex items-center gap-1.5 shadow-sm"
+                  >
+                    <QrCode className="w-4 h-4" />
+                    <span>Signed QR Evidence Report</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveView('propertyCard')}
+                    className="px-4 py-2 rounded-xl bg-[#C85A32] text-white text-xs font-bold hover:bg-[#a64420] transition-colors flex items-center gap-2 shadow-sm"
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span>Export Gharouni Card</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
@@ -796,6 +807,19 @@ export const RoRDossierModal: React.FC<Props> = ({
           )}
         </div>
       </div>
+
+      {/* Cryptographically Signed Evidence Report Modal */}
+      {dossier && (
+        <SignedEvidenceModal
+          isOpen={showSignedEvidenceModal}
+          onClose={() => setShowSignedEvidenceModal(false)}
+          parcelId={dossier.parcel_id}
+          ulpin={dossier.ulpin}
+          droneAreaSqm={dossier.spatial.actual_drone_area_sqm}
+          legalAreaSqm={dossier.legal_registry.recorded_legal_area_sqm}
+          variancePct={dossier.variance_analysis.variance_pct}
+        />
+      )}
     </div>
   );
 };

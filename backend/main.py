@@ -40,12 +40,16 @@ from routes.auth_routes import router as auth_router
 from routes.spatial_routes import router as spatial_router
 from routes.ocr_routes import router as ocr_router
 from routes.ledger_routes import router as ledger_router
+from routes.proposal_routes import router as proposal_router
+from routes.evidence_routes import router as evidence_router
 
 app.include_router(auth_router)
 app.include_router(spatial_router)
 app.include_router(ocr_router)
 app.include_router(ledger_router)
 app.include_router(ror_router)
+app.include_router(proposal_router)
+app.include_router(evidence_router)
 
 DATA_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "raw", "drone_parcels_raw.geojson")
 

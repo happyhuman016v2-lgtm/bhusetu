@@ -252,10 +252,19 @@ def process_uploaded_document(file_bytes: bytes, filename: str) -> Dict[str, Any
     # 4. Spatial auto-link
     spatial_match = link_to_drone_parcel(entities)
 
+    # 5. Duplicate and Conflicting Document Intelligence Analysis
+    from services.document_similarity import doc_similarity_service
+    similarity_analysis = doc_similarity_service.analyze_document_upload(
+        file_bytes=file_bytes,
+        filename=filename,
+        extracted_entities=entities
+    )
+
     return {
         "filename": filename,
         "extracted_entities": entities,
         "spatial_match": spatial_match,
+        "similarity_analysis": similarity_analysis,
         "raw_text_preview": raw_text[:400] + "..." if len(raw_text) > 400 else raw_text,
         "has_preprocessed_preview": preprocessed_bytes is not None
     }

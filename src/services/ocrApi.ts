@@ -40,6 +40,7 @@ export interface OCRUploadResponse {
   filename: string;
   extracted_entities: OCRExtractedEntities;
   spatial_match: OCRSpatialMatch | null;
+  similarity_analysis?: any;
   raw_text_preview: string;
   has_preprocessed_preview: boolean;
 }

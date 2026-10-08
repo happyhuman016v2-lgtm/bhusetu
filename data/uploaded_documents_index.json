@@ -1,0 +1,41 @@
+[
+  {
+    "doc_id": "DOC-BASELINE-101",
+    "filename": "UP_Khatauni_Plot101_Official_Record.pdf",
+    "sha256": "4a7b9c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b",
+    "phash": "f0e0d0c0b0a09080",
+    "dhash": "8090a0b0c0d0e0f0",
+    "uploaded_at": "2026-02-10T10:30:00Z",
+    "village_name": "Rampur Kalan",
+    "tehsil": "Bakshi Ka Talab",
+    "district": "Lucknow",
+    "khasra_no": "101",
+    "khata_no": "KH-882",
+    "pattadar_names": [
+      "Ramesh Kumar Verma",
+      "Sunita Devi"
+    ],
+    "recorded_area_sqm": 412.0,
+    "mortgage_status": "SBI Agricultural Loan \u20b91,50,000",
+    "evidence_status": "CONFIRMED_BASELINE"
+  },
+  {
+    "doc_id": "DOC-BASELINE-104",
+    "filename": "UP_Khatauni_Plot104_Extract.pdf",
+    "sha256": "9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a",
+    "phash": "f0e0d0c0b0a09082",
+    "dhash": "8090a0b0c0d0e0f2",
+    "uploaded_at": "2026-02-12T14:15:00Z",
+    "village_name": "Rampur Kalan",
+    "tehsil": "Bakshi Ka Talab",
+    "district": "Lucknow",
+    "khasra_no": "104",
+    "khata_no": "KH-904",
+    "pattadar_names": [
+      "Suresh Chandra Sharma"
+    ],
+    "recorded_area_sqm": 530.0,
+    "mortgage_status": "Nil Encumbrance",
+    "evidence_status": "CONFIRMED_BASELINE"
+  }
+]
