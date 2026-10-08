@@ -216,18 +216,29 @@ export const MapEngine: React.FC<Props> = ({
 
   const fitToParcel = useCallback((map: maplibregl.Map, parcel: Parcel) => {
     try {
-      const bbox = turf.bbox(parcel.geometry);
-      map.fitBounds(
-        [
-          [bbox[0], bbox[1]],
-          [bbox[2], bbox[3]],
-        ],
-        {
-          padding: 80,
-          duration: 900,
-          maxZoom: 17.5,
-        }
-      );
+      if (!parcel || !parcel.geometry) return;
+      const geom = (parcel.geometry as any)?.geometry || parcel.geometry;
+      const bbox = turf.bbox(geom);
+      
+      const doFit = () => {
+        map.fitBounds(
+          [
+            [bbox[0], bbox[1]],
+            [bbox[2], bbox[3]],
+          ],
+          {
+            padding: 80,
+            duration: 900,
+            maxZoom: 17.5,
+          }
+        );
+      };
+
+      if (map.loaded()) {
+        doFit();
+      } else {
+        map.once('load', doFit);
+      }
     } catch (e) {
       console.warn('fitBounds error:', e);
     }
@@ -488,6 +499,21 @@ export const MapEngine: React.FC<Props> = ({
       updateMapData(mapRightRef.current, 'right');
     }
   }, [updateMapData, parcels, selectedParcelId, activePartition, showBoundaries, showBuffers]);
+
+  // Automatically fly to selected parcel whenever selectedParcelId changes
+  useEffect(() => {
+    if (!selectedParcelId) return;
+
+    const targetParcel = parcels.find((p) => p.id === selectedParcelId);
+    if (!targetParcel || !targetParcel.geometry) return;
+
+    if (mapRef.current) {
+      fitToParcel(mapRef.current, targetParcel);
+    }
+    if (mapRightRef.current) {
+      fitToParcel(mapRightRef.current, targetParcel);
+    }
+  }, [selectedParcelId, parcels, fitToParcel]);
 
   // Satellite Opacity Slider on Left Map (when NOT in Split View)
   useEffect(() => {
