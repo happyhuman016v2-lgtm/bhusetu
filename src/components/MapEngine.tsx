@@ -400,6 +400,7 @@ export const MapEngine: React.FC<Props> = ({
       zoom: 15.5,
       maxZoom: 19.5,
       minZoom: 4,
+      maxCanvasSize: [4096, 4096],
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
@@ -472,6 +473,7 @@ export const MapEngine: React.FC<Props> = ({
       pitch: currentPitch,
       maxZoom: 19.5,
       minZoom: 4,
+      maxCanvasSize: [4096, 4096],
     });
 
     mapRight.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
