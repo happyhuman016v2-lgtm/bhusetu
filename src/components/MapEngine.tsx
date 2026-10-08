@@ -10,6 +10,7 @@ import {
   Maximize2,
   Minimize2,
   Columns,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 interface Props {
@@ -32,6 +33,7 @@ const SATELLITE_TILES_URL =
 
 const BASE_MAP_STYLE: maplibregl.StyleSpecification = {
   version: 8,
+  glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
   sources: {
     'osm-street': {
       type: 'raster',
@@ -71,6 +73,7 @@ const BASE_MAP_STYLE: maplibregl.StyleSpecification = {
 
 const SATELLITE_ONLY_STYLE: maplibregl.StyleSpecification = {
   version: 8,
+  glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
   sources: {
     'drone-source': {
       type: 'raster',
@@ -89,6 +92,83 @@ const SATELLITE_ONLY_STYLE: maplibregl.StyleSpecification = {
       maxzoom: 19,
     },
   ],
+};
+
+// Helper: Ensure valid GeoJSON FeatureCollection for parcels
+const buildParcelFeatures = (
+  parcels: Parcel[],
+  selectedId: string,
+  visible: boolean
+): GeoJSON.FeatureCollection => {
+  if (!visible) return { type: 'FeatureCollection', features: [] };
+  return {
+    type: 'FeatureCollection',
+    features: parcels.map((p) => {
+      const geom = (p.geometry as any)?.geometry || p.geometry;
+      return {
+        type: 'Feature',
+        id: p.id,
+        geometry: geom,
+        properties: {
+          id: p.id,
+          surveyNumber: p.surveyNumber,
+          ulpin: p.ulpin,
+          status: p.status,
+          trustGrade: p.trustGrade,
+          trustScore: p.trustScore,
+          isSelected: p.id === selectedId,
+        },
+      };
+    }) as any,
+  };
+};
+
+// Helper: Ensure valid GeoJSON FeatureCollection for buffer zones
+const buildBufferFeatures = (
+  parcels: Parcel[],
+  visible: boolean
+): GeoJSON.FeatureCollection => {
+  if (!visible) return { type: 'FeatureCollection', features: [] };
+  return {
+    type: 'FeatureCollection',
+    features: parcels
+      .filter((p) => p.bufferZone && p.bufferZone.geometry)
+      .map((p) => {
+        const geom = (p.bufferZone!.geometry as any)?.geometry || p.bufferZone!.geometry;
+        return {
+          type: 'Feature',
+          properties: {
+            parcelId: p.id,
+            name: p.bufferZone!.name,
+            type: p.bufferZone!.type,
+          },
+          geometry: geom,
+        };
+      }) as any,
+  };
+};
+
+// Helper: Ensure valid GeoJSON FeatureCollection for active partitions
+const buildPartitionFeatures = (
+  activePartition: PartitionResult | undefined,
+  selectedId: string
+): GeoJSON.FeatureCollection => {
+  if (!activePartition || activePartition.parcelId !== selectedId) {
+    return { type: 'FeatureCollection', features: [] };
+  }
+  return {
+    type: 'FeatureCollection',
+    features: activePartition.splits.map((s) => ({
+      type: 'Feature',
+      geometry: (s.polygon as any)?.geometry || s.polygon,
+      properties: {
+        name: s.shareholderName,
+        color: s.color,
+        area: s.regionalAreaFormatted,
+        subSurvey: s.subSurveyNo,
+      },
+    })) as any,
+  };
 };
 
 export const MapEngine: React.FC<Props> = ({
@@ -112,15 +192,22 @@ export const MapEngine: React.FC<Props> = ({
   const onSelectParcelRef = useRef(onSelectParcel);
   onSelectParcelRef.current = onSelectParcel;
 
-  // Split View Mode (Side-by-side comparison: Street vs Satellite)
+  const selectedParcelIdRef = useRef(selectedParcelId);
+  selectedParcelIdRef.current = selectedParcelId;
+
+  // Split View Controls
   const [isSplitView, setIsSplitView] = useState<boolean>(false);
+  const [splitMode, setSplitMode] = useState<'curtain' | 'dual'>('curtain');
+  const [curtainPosition, setCurtainPosition] = useState<number>(50); // 0 to 100 percent
+  const isDraggingCurtainRef = useRef<boolean>(false);
+
+  // Layer Visibility & Opacity
   const [satelliteOpacity, setSatelliteOpacity] = useState<number>(0.75);
   const [showBoundaries, setShowBoundaries] = useState<boolean>(true);
   const [showBuffers, setShowBuffers] = useState<boolean>(true);
 
-  // Track active interacting map to prevent recursive sync loops
-  const interactingMapRef = useRef<'left' | 'right' | null>(null);
-  const syncRafRef = useRef<number | null>(null);
+  // Active sync driver for dual split mode (prevents ping-pong loops)
+  const activeDriverRef = useRef<'left' | 'right' | null>(null);
 
   // Initial Center on first parcel
   const initialCenter: [number, number] =
@@ -138,7 +225,7 @@ export const MapEngine: React.FC<Props> = ({
         ],
         {
           padding: 80,
-          duration: 1000,
+          duration: 900,
           maxZoom: 17.5,
         }
       );
@@ -147,91 +234,44 @@ export const MapEngine: React.FC<Props> = ({
     }
   }, []);
 
-  // Update GeoJSON sources efficiently using .setData()
+  // Update GeoJSON sources safely
   const updateMapData = useCallback(
     (map: maplibregl.Map, side: 'left' | 'right') => {
-      if (!map.isStyleLoaded()) return;
-
       const prefix = `${side}-`;
 
-      // 1. Parcels FeatureCollection
-      const parcelFeatures = showBoundaries
-        ? parcels.map((p) => ({
-            ...p.geometry,
-            properties: {
-              id: p.id,
-              surveyNumber: p.surveyNumber,
-              ulpin: p.ulpin,
-              status: p.status,
-              trustGrade: p.trustGrade,
-              isSelected: p.id === selectedParcelId,
-            },
-          }))
-        : [];
-
+      // 1. Parcels
       const parcelSource = map.getSource(`${prefix}parcels-source`) as maplibregl.GeoJSONSource;
       if (parcelSource) {
-        parcelSource.setData({
-          type: 'FeatureCollection',
-          features: parcelFeatures as any,
-        });
+        const fc = buildParcelFeatures(parcelsRef.current, selectedParcelIdRef.current, showBoundaries);
+        parcelSource.setData(fc as any);
       }
 
-      // 2. Buffer Zones FeatureCollection
-      const bufferFeatures = showBuffers
-        ? parcels
-            .filter((p) => p.bufferZone && p.bufferZone.geometry)
-            .map((p) => ({
-              ...p.bufferZone!.geometry,
-              properties: {
-                parcelId: p.id,
-                name: p.bufferZone!.name,
-                type: p.bufferZone!.type,
-              },
-            }))
-        : [];
-
+      // 2. Buffer Zones
       const bufferSource = map.getSource(`${prefix}buffer-source`) as maplibregl.GeoJSONSource;
       if (bufferSource) {
-        bufferSource.setData({
-          type: 'FeatureCollection',
-          features: bufferFeatures as any,
-        });
+        const fc = buildBufferFeatures(parcelsRef.current, showBuffers);
+        bufferSource.setData(fc as any);
       }
 
-      // 3. Partition FeatureCollection
-      const partitionFeatures =
-        activePartition && activePartition.parcelId === selectedParcelId
-          ? activePartition.splits.map((s) => ({
-              ...s.polygon,
-              properties: {
-                name: s.shareholderName,
-                color: s.color,
-                area: s.regionalAreaFormatted,
-                subSurvey: s.subSurveyNo,
-              },
-            }))
-          : [];
-
+      // 3. Partition
       const partitionSource = map.getSource(`${prefix}partition-source`) as maplibregl.GeoJSONSource;
       if (partitionSource) {
-        partitionSource.setData({
-          type: 'FeatureCollection',
-          features: partitionFeatures as any,
-        });
+        const fc = buildPartitionFeatures(activePartition, selectedParcelIdRef.current);
+        partitionSource.setData(fc as any);
       }
     },
-    [parcels, selectedParcelId, activePartition, showBoundaries, showBuffers]
+    [activePartition, showBoundaries, showBuffers]
   );
 
-  // Set up layers once on map load
+  // Setup layers and sources on map load
   const setupLayersOnce = (map: maplibregl.Map, side: 'left' | 'right') => {
     const prefix = `${side}-`;
 
     // 1. Buffer Source & Layers
+    const bufferFC = buildBufferFeatures(parcelsRef.current, showBuffers);
     map.addSource(`${prefix}buffer-source`, {
       type: 'geojson',
-      data: { type: 'FeatureCollection', features: [] },
+      data: bufferFC as any,
     });
 
     map.addLayer({
@@ -240,7 +280,7 @@ export const MapEngine: React.FC<Props> = ({
       source: `${prefix}buffer-source`,
       paint: {
         'fill-color': '#0284C7',
-        'fill-opacity': 0.35,
+        'fill-opacity': side === 'right' ? 0.35 : 0.4,
       },
     });
 
@@ -249,16 +289,17 @@ export const MapEngine: React.FC<Props> = ({
       type: 'line',
       source: `${prefix}buffer-source`,
       paint: {
-        'line-color': '#0284C7',
+        'line-color': side === 'right' ? '#38BDF8' : '#0284C7',
         'line-width': 2.5,
         'line-dasharray': [3, 2],
       },
     });
 
     // 2. Parcels Source & Layers
+    const parcelFC = buildParcelFeatures(parcelsRef.current, selectedParcelIdRef.current, showBoundaries);
     map.addSource(`${prefix}parcels-source`, {
       type: 'geojson',
-      data: { type: 'FeatureCollection', features: [] },
+      data: parcelFC as any,
     });
 
     map.addLayer({
@@ -278,19 +319,32 @@ export const MapEngine: React.FC<Props> = ({
             'WARNING',
             '#D97706',
             'CRITICAL',
-            '#B91C1C',
+            '#DC2626',
             '#6B6360',
           ],
         ],
         'fill-opacity': [
           'case',
           ['get', 'isSelected'],
-          side === 'right' ? 0.35 : 0.45,
-          side === 'right' ? 0.15 : 0.25,
+          side === 'right' ? 0.45 : 0.55,
+          side === 'right' ? 0.22 : 0.32,
         ],
       },
     });
 
+    // Black casing outline underneath for high contrast on bright satellite backgrounds
+    map.addLayer({
+      id: `${prefix}parcels-casing`,
+      type: 'line',
+      source: `${prefix}parcels-source`,
+      paint: {
+        'line-color': '#000000',
+        'line-width': ['case', ['get', 'isSelected'], 5.0, 3.5],
+        'line-opacity': 0.85,
+      },
+    });
+
+    // Sharp Cadastral Boundary Line (Gold on Satellite, Crisp White/Dark on Street)
     map.addLayer({
       id: `${prefix}parcels-line`,
       type: 'line',
@@ -299,13 +353,14 @@ export const MapEngine: React.FC<Props> = ({
         'line-color': [
           'case',
           ['get', 'isSelected'],
-          '#FFFFFF',
-          side === 'right' ? '#FBF9F5' : '#23201F',
+          side === 'right' ? '#FFEA00' : '#FFFFFF',
+          side === 'right' ? '#FACC15' : '#FFFFFF',
         ],
-        'line-width': ['case', ['get', 'isSelected'], 3.5, 2.0],
+        'line-width': ['case', ['get', 'isSelected'], 3.5, 2.2],
       },
     });
 
+    // Outer Selection Halo
     map.addLayer({
       id: `${prefix}parcels-selected-outline`,
       type: 'line',
@@ -313,33 +368,35 @@ export const MapEngine: React.FC<Props> = ({
       filter: ['==', ['get', 'isSelected'], true],
       paint: {
         'line-color': '#C85A32',
-        'line-width': 6.0,
-        'line-opacity': 0.65,
+        'line-width': 7.0,
+        'line-opacity': 0.75,
       },
     });
 
+    // Survey Number Labels
     map.addLayer({
       id: `${prefix}parcels-labels`,
       type: 'symbol',
       source: `${prefix}parcels-source`,
-      minzoom: 14.5,
+      minzoom: 12.5,
       layout: {
         'text-field': ['get', 'surveyNumber'],
-        'text-size': 11,
+        'text-size': 11.5,
         'text-anchor': 'center',
         'text-allow-overlap': false,
       },
       paint: {
-        'text-color': '#23201F',
-        'text-halo-color': '#FFFFFF',
-        'text-halo-width': 2.5,
+        'text-color': side === 'right' ? '#FFFFFF' : '#1E293B',
+        'text-halo-color': side === 'right' ? '#000000' : '#FFFFFF',
+        'text-halo-width': 3.0,
       },
     });
 
     // 3. Partition Source & Layers
+    const partitionFC = buildPartitionFeatures(activePartition, selectedParcelIdRef.current);
     map.addSource(`${prefix}partition-source`, {
       type: 'geojson',
-      data: { type: 'FeatureCollection', features: [] },
+      data: partitionFC as any,
     });
 
     map.addLayer({
@@ -348,7 +405,7 @@ export const MapEngine: React.FC<Props> = ({
       source: `${prefix}partition-source`,
       paint: {
         'fill-color': ['get', 'color'],
-        'fill-opacity': 0.55,
+        'fill-opacity': 0.6,
       },
     });
 
@@ -358,11 +415,11 @@ export const MapEngine: React.FC<Props> = ({
       source: `${prefix}partition-source`,
       paint: {
         'line-color': '#FFFFFF',
-        'line-width': 3,
+        'line-width': 3.5,
       },
     });
 
-    // Register Click & Hover Listeners ONCE
+    // Register Click & Cursor Listeners
     map.on('click', `${prefix}parcels-fill`, (e: any) => {
       if (e.features && e.features[0]) {
         const id = e.features[0].properties?.id;
@@ -385,7 +442,7 @@ export const MapEngine: React.FC<Props> = ({
     });
   };
 
-  // Initialize Primary Map (Once)
+  // Initialize Primary Map (Street & Cadastral)
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
@@ -400,7 +457,6 @@ export const MapEngine: React.FC<Props> = ({
       zoom: 15.5,
       maxZoom: 19.5,
       minZoom: 4,
-      maxCanvasSize: [4096, 4096],
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
@@ -411,7 +467,8 @@ export const MapEngine: React.FC<Props> = ({
     map.on('load', () => {
       setupLayersOnce(map, 'left');
       updateMapData(map, 'left');
-      const selected = parcelsRef.current.find((p) => p.id === selectedParcelId) || parcelsRef.current[0];
+
+      const selected = parcelsRef.current.find((p) => p.id === selectedParcelIdRef.current) || parcelsRef.current[0];
       if (selected && selected.geometry) {
         fitToParcel(map, selected);
       }
@@ -423,28 +480,36 @@ export const MapEngine: React.FC<Props> = ({
     };
   }, []);
 
-  // Update primary & secondary maps whenever data or filters change
+  // Update GeoJSON layers when parcels, partition or filters change
   useEffect(() => {
-    if (mapRef.current && mapRef.current.isStyleLoaded()) {
+    if (mapRef.current) {
       updateMapData(mapRef.current, 'left');
     }
-    if (mapRightRef.current && mapRightRef.current.isStyleLoaded()) {
+    if (mapRightRef.current) {
       updateMapData(mapRightRef.current, 'right');
     }
-  }, [updateMapData]);
+  }, [updateMapData, parcels, selectedParcelId, activePartition, showBoundaries, showBuffers]);
 
-  // Satellite Opacity Slider
+  // Satellite Opacity Slider (When NOT in Split View)
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map) return;
 
-    if (map.getLayer('drone-layer')) {
-      const op = isSplitView ? 0 : satelliteOpacity;
-      map.setPaintProperty('drone-layer', 'raster-opacity', op);
+    const applyOpacity = () => {
+      if (map.getLayer('drone-layer')) {
+        const op = isSplitView ? 0 : satelliteOpacity;
+        map.setPaintProperty('drone-layer', 'raster-opacity', op);
+      }
+    };
+
+    if (map.isStyleLoaded()) {
+      applyOpacity();
+    } else {
+      map.once('styledata', applyOpacity);
     }
   }, [satelliteOpacity, isSplitView]);
 
-  // Handle Split View Initialization & Synchronized Event Handling
+  // Initialize & Synchronize Secondary Map when Split View is Active
   useEffect(() => {
     const primary = mapRef.current;
 
@@ -464,6 +529,7 @@ export const MapEngine: React.FC<Props> = ({
     const currentBearing = primary.getBearing();
     const currentPitch = primary.getPitch();
 
+    // Create Secondary Map (Satellite High-Res Photogrammetry)
     const mapRight = new maplibregl.Map({
       container: mapRightContainerRef.current,
       style: SATELLITE_ONLY_STYLE,
@@ -473,10 +539,12 @@ export const MapEngine: React.FC<Props> = ({
       pitch: currentPitch,
       maxZoom: 19.5,
       minZoom: 4,
-      maxCanvasSize: [4096, 4096],
+      interactive: splitMode === 'dual', // In curtain mode, primary drives all interactions
     });
 
-    mapRight.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
+    if (splitMode === 'dual') {
+      mapRight.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
+    }
     mapRightRef.current = mapRight;
 
     mapRight.on('load', () => {
@@ -484,106 +552,120 @@ export const MapEngine: React.FC<Props> = ({
       updateMapData(mapRight, 'right');
     });
 
-    // Pointer-driven synchronization (Only the active interacting map drives the other)
-    const onLeftPointerDown = () => {
-      interactingMapRef.current = 'left';
-    };
-    const onRightPointerDown = () => {
-      interactingMapRef.current = 'right';
-    };
-    const onPointerUp = () => {
-      interactingMapRef.current = null;
-    };
-
-    const leftCanvas = primary.getCanvas();
-    const rightCanvas = mapRight.getCanvas();
-
-    leftCanvas.addEventListener('mousedown', onLeftPointerDown);
-    leftCanvas.addEventListener('wheel', onLeftPointerDown, { passive: true });
-    leftCanvas.addEventListener('touchstart', onLeftPointerDown, { passive: true });
-
-    rightCanvas.addEventListener('mousedown', onRightPointerDown);
-    rightCanvas.addEventListener('wheel', onRightPointerDown, { passive: true });
-    rightCanvas.addEventListener('touchstart', onRightPointerDown, { passive: true });
-
-    window.addEventListener('mouseup', onPointerUp);
-    window.addEventListener('touchend', onPointerUp);
-
-    // Sync from Left to Right via requestAnimationFrame (Capped at 60 FPS)
+    // Silky Smooth Synchronization using MapLibre's camera state machine
+    // Zero rAF frame dropping, zero lost kinetic momentum!
     const syncLeftToRight = () => {
-      if (interactingMapRef.current !== 'left' || !mapRightRef.current) return;
-      if (syncRafRef.current) cancelAnimationFrame(syncRafRef.current);
-
-      syncRafRef.current = requestAnimationFrame(() => {
-        mapRightRef.current?.jumpTo({
-          center: primary.getCenter(),
-          zoom: primary.getZoom(),
-          bearing: primary.getBearing(),
-          pitch: primary.getPitch(),
-        });
+      if (activeDriverRef.current === 'right' || !mapRightRef.current) return;
+      mapRightRef.current.jumpTo({
+        center: primary.getCenter(),
+        zoom: primary.getZoom(),
+        bearing: primary.getBearing(),
+        pitch: primary.getPitch(),
       });
     };
 
-    // Sync from Right to Left via requestAnimationFrame
     const syncRightToLeft = () => {
-      if (interactingMapRef.current !== 'right' || !mapRef.current) return;
-      if (syncRafRef.current) cancelAnimationFrame(syncRafRef.current);
-
-      syncRafRef.current = requestAnimationFrame(() => {
-        mapRef.current?.jumpTo({
-          center: mapRight.getCenter(),
-          zoom: mapRight.getZoom(),
-          bearing: mapRight.getBearing(),
-          pitch: mapRight.getPitch(),
-        });
+      if (activeDriverRef.current === 'left' || !mapRef.current) return;
+      mapRef.current.jumpTo({
+        center: mapRight.getCenter(),
+        zoom: mapRight.getZoom(),
+        bearing: mapRight.getBearing(),
+        pitch: mapRight.getPitch(),
       });
     };
 
-    primary.on('move', syncLeftToRight);
-    mapRight.on('move', syncRightToLeft);
+    // Primary events
+    const onPrimaryMoveStart = () => {
+      if (!activeDriverRef.current) activeDriverRef.current = 'left';
+    };
+    const onPrimaryMove = () => {
+      if (activeDriverRef.current === 'left') syncLeftToRight();
+    };
+    const onPrimaryMoveEnd = () => {
+      if (activeDriverRef.current === 'left') activeDriverRef.current = null;
+    };
+
+    primary.on('movestart', onPrimaryMoveStart);
+    primary.on('move', onPrimaryMove);
+    primary.on('moveend', onPrimaryMoveEnd);
+
+    // Follower events (Only active in dual pane mode)
+    const onRightMoveStart = () => {
+      if (!activeDriverRef.current) activeDriverRef.current = 'right';
+    };
+    const onRightMove = () => {
+      if (activeDriverRef.current === 'right') syncRightToLeft();
+    };
+    const onRightMoveEnd = () => {
+      if (activeDriverRef.current === 'right') activeDriverRef.current = null;
+    };
+
+    mapRight.on('movestart', onRightMoveStart);
+    mapRight.on('move', onRightMove);
+    mapRight.on('moveend', onRightMoveEnd);
 
     setTimeout(() => {
       primary.resize();
       mapRight.resize();
-    }, 50);
+    }, 60);
 
     return () => {
-      primary.off('move', syncLeftToRight);
-      mapRight.off('move', syncRightToLeft);
+      primary.off('movestart', onPrimaryMoveStart);
+      primary.off('move', onPrimaryMove);
+      primary.off('moveend', onPrimaryMoveEnd);
 
-      leftCanvas.removeEventListener('mousedown', onLeftPointerDown);
-      leftCanvas.removeEventListener('wheel', onLeftPointerDown);
-      leftCanvas.removeEventListener('touchstart', onLeftPointerDown);
-
-      rightCanvas.removeEventListener('mousedown', onRightPointerDown);
-      rightCanvas.removeEventListener('wheel', onRightPointerDown);
-      rightCanvas.removeEventListener('touchstart', onRightPointerDown);
-
-      window.removeEventListener('mouseup', onPointerUp);
-      window.removeEventListener('touchend', onPointerUp);
-
-      if (syncRafRef.current) cancelAnimationFrame(syncRafRef.current);
+      mapRight.off('movestart', onRightMoveStart);
+      mapRight.off('move', onRightMove);
+      mapRight.off('moveend', onRightMoveEnd);
 
       mapRight.remove();
       mapRightRef.current = null;
       primary.resize();
     };
-  }, [isSplitView]);
+  }, [isSplitView, splitMode]);
 
-  // Handle Resize immediately on layout expand/collapse without CSS delay
+  // Handle Resize immediately on layout expand/collapse
   useEffect(() => {
     const timer = setTimeout(() => {
       mapRef.current?.resize();
       mapRightRef.current?.resize();
-    }, 40);
+    }, 50);
     return () => clearTimeout(timer);
-  }, [isMapExpanded]);
+  }, [isMapExpanded, isSplitView, splitMode]);
 
+  // Focus Selected Boundary button
   const handleFocusSelected = () => {
     const selected = parcels.find((p) => p.id === selectedParcelId);
     if (selected && selected.geometry) {
       if (mapRef.current) fitToParcel(mapRef.current, selected);
       if (mapRightRef.current) fitToParcel(mapRightRef.current, selected);
+    }
+  };
+
+  // Draggable Curtain Divider event listeners
+  const handleCurtainPointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    isDraggingCurtainRef.current = true;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handleCurtainPointerMove = (e: React.PointerEvent) => {
+    if (!isDraggingCurtainRef.current || !mapContainerRef.current) return;
+    const rect = mapContainerRef.current.parentElement?.getBoundingClientRect();
+    if (!rect) return;
+    const x = e.clientX - rect.left;
+    const pct = Math.max(5, Math.min(95, (x / rect.width) * 100));
+    setCurtainPosition(pct);
+  };
+
+  const handleCurtainPointerUp = (e: React.PointerEvent) => {
+    if (isDraggingCurtainRef.current) {
+      isDraggingCurtainRef.current = false;
+      try {
+        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch {
+        // Ignored
+      }
     }
   };
 
@@ -599,13 +681,41 @@ export const MapEngine: React.FC<Props> = ({
               ? 'bg-[#23201F] text-white border-black'
               : 'bg-white/95 backdrop-blur-md text-[#23201F] border-[#E7DFD5] hover:bg-[#FAF7F2]'
           }`}
-          title="Toggle Side-by-Side Comparison: Street Map vs Satellite Imagery"
+          title="Toggle Comparison: Street Map vs Satellite Imagery"
         >
           <Columns className="w-4 h-4 text-[#C85A32]" />
           <span>{isSplitView ? 'Exit Split View' : 'Split View (Street vs Sat)'}</span>
         </button>
 
-        {/* Satellite Imagery Slider & Toggle (when NOT in split view) */}
+        {/* Split View Sub-Mode Switcher (When Split View is Active) */}
+        {isSplitView && (
+          <div className="bg-white/95 backdrop-blur-md px-2 py-1.5 rounded-xl shadow-lg border border-[#E7DFD5] flex items-center gap-1 text-xs">
+            <button
+              onClick={() => setSplitMode('curtain')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                splitMode === 'curtain'
+                  ? 'bg-[#C85A32] text-white shadow-xs'
+                  : 'text-[#383432] hover:bg-[#FAF7F2]'
+              }`}
+              title="Interactive Wipe Curtain: Slide divider across the parcel"
+            >
+              ⬌ Swipe Curtain
+            </button>
+            <button
+              onClick={() => setSplitMode('dual')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                splitMode === 'dual'
+                  ? 'bg-[#C85A32] text-white shadow-xs'
+                  : 'text-[#383432] hover:bg-[#FAF7F2]'
+              }`}
+              title="Side-by-Side Dual View: Synchronized panes"
+            >
+              ◫ Side-by-Side
+            </button>
+          </div>
+        )}
+
+        {/* Satellite Imagery Slider & Toggle (When NOT in Split View) */}
         {!isSplitView && (
           <div className="bg-white/95 backdrop-blur-md px-3 py-2 rounded-xl shadow-lg border border-[#E7DFD5] flex items-center gap-3">
             <div className="flex items-center gap-1.5 text-xs font-bold text-[#23201F]">
@@ -640,6 +750,16 @@ export const MapEngine: React.FC<Props> = ({
                 }`}
               >
                 Street
+              </button>
+              <button
+                onClick={() => setSatelliteOpacity(0.5)}
+                className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
+                  satelliteOpacity === 0.5
+                    ? 'bg-[#23201F] text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                50%
               </button>
               <button
                 onClick={() => setSatelliteOpacity(1)}
@@ -687,33 +807,76 @@ export const MapEngine: React.FC<Props> = ({
         )}
       </div>
 
-      {/* Main Map View Area: Instant responsive layout (Zero CSS transitions on canvas) */}
-      <div className="w-full h-full flex flex-1 overflow-hidden relative">
-        {/* Left Map Pane (Street & Cadastral Vector Map) */}
+      {/* Main Map Viewport */}
+      <div
+        className="w-full h-full flex flex-1 overflow-hidden relative select-none"
+        onPointerMove={isSplitView && splitMode === 'curtain' ? handleCurtainPointerMove : undefined}
+        onPointerUp={isSplitView && splitMode === 'curtain' ? handleCurtainPointerUp : undefined}
+      >
+        {/* Left / Base Map Container */}
         <div
           ref={mapContainerRef}
-          className={`h-full ${isSplitView ? 'w-1/2 border-r-2 border-[#C85A32]' : 'w-full'}`}
+          className={`h-full ${
+            isSplitView && splitMode === 'dual'
+              ? 'w-1/2 border-r-2 border-[#C85A32]'
+              : 'w-full'
+          }`}
         />
 
-        {/* Left Pane Badge in Split Mode */}
+        {/* Secondary Map Container (Satellite) */}
         {isSplitView && (
-          <div className="absolute top-16 left-3 z-10 bg-white/90 backdrop-blur-xs px-2.5 py-1 rounded-lg shadow border border-[#E7DFD5] text-[11px] font-bold text-[#23201F] flex items-center gap-1.5 pointer-events-none">
-            <span className="w-2 h-2 rounded-full bg-blue-600" />
-            <span>🗺️ Cadastral Street Map</span>
+          <div
+            ref={mapRightContainerRef}
+            className={`h-full ${
+              splitMode === 'dual'
+                ? 'w-1/2 relative'
+                : 'absolute inset-0 pointer-events-none'
+            }`}
+            style={
+              splitMode === 'curtain'
+                ? {
+                    clipPath: `inset(0 0 0 ${curtainPosition}%)`,
+                  }
+                : undefined
+            }
+          />
+        )}
+
+        {/* Swipe Curtain Draggable Handle (Curtain Mode Only) */}
+        {isSplitView && splitMode === 'curtain' && (
+          <div
+            className="absolute top-0 bottom-0 z-30 cursor-ew-resize flex items-center justify-center pointer-events-auto"
+            style={{
+              left: `${curtainPosition}%`,
+              transform: 'translateX(-50%)',
+              width: '40px',
+            }}
+            onPointerDown={handleCurtainPointerDown}
+          >
+            {/* Vertical Divider Line */}
+            <div className="w-[3px] h-full bg-[#C85A32] shadow-[0_0_10px_rgba(0,0,0,0.5)]" />
+
+            {/* Floating Handle Pill */}
+            <div className="absolute px-3 py-1.5 bg-[#23201F] text-white rounded-full text-[11px] font-bold shadow-2xl border-2 border-[#C85A32] flex items-center gap-1.5 select-none hover:scale-105 active:scale-95 transition-transform">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-[#C85A32]" />
+              <span className="tracking-tight">Slide to Compare</span>
+            </div>
           </div>
         )}
 
-        {/* Right Map Pane (Satellite High-Res Photogrammetry) in Split Mode */}
+        {/* Mode Badges in Split View */}
         {isSplitView && (
-          <div ref={mapRightContainerRef} className="w-1/2 h-full relative" />
-        )}
+          <>
+            <div className="absolute top-16 left-3 z-10 bg-white/90 backdrop-blur-xs px-2.5 py-1 rounded-lg shadow border border-[#E7DFD5] text-[11px] font-bold text-[#23201F] flex items-center gap-1.5 pointer-events-none">
+              <span className="w-2 h-2 rounded-full bg-blue-600" />
+              <span>🗺️ Cadastral Street</span>
+            </div>
 
-        {/* Right Pane Badge in Split Mode */}
-        {isSplitView && (
-          <div className="absolute top-16 right-3 z-10 bg-black/80 backdrop-blur-xs px-2.5 py-1 rounded-lg shadow border border-white/20 text-[11px] font-bold text-white flex items-center gap-1.5 pointer-events-none">
-            <span className="w-2 h-2 rounded-full bg-green-400" />
-            <span>🛰️ Esri Satellite Imagery</span>
-          </div>
+            <div className="absolute top-16 right-3 z-10 bg-black/80 backdrop-blur-xs px-2.5 py-1 rounded-lg shadow border border-white/20 text-[11px] font-bold text-white flex items-center gap-1.5 pointer-events-none">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span>🛰️ Satellite Photogrammetry</span>
+            </div>
+          </>
         )}
       </div>
 
@@ -738,7 +901,7 @@ export const MapEngine: React.FC<Props> = ({
             <span>Survey Discrepancy</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-xs bg-[#B91C1C] border border-black/20 shrink-0" />
+            <span className="w-3 h-3 rounded-xs bg-[#DC2626] border border-black/20 shrink-0" />
             <span>Critical Encroachment</span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -756,7 +919,7 @@ export const MapEngine: React.FC<Props> = ({
               onChange={(e) => setShowBoundaries(e.target.checked)}
               className="accent-[#C85A32]"
             />
-            <span>Boundaries</span>
+            <span className="font-medium text-[#23201F]">Boundaries</span>
           </label>
           <label className="flex items-center gap-1 cursor-pointer">
             <input
@@ -765,7 +928,7 @@ export const MapEngine: React.FC<Props> = ({
               onChange={(e) => setShowBuffers(e.target.checked)}
               className="accent-[#0284C7]"
             />
-            <span>Buffer Zones</span>
+            <span className="font-medium text-[#23201F]">Buffer Zones</span>
           </label>
         </div>
 
