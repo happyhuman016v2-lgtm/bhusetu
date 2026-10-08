@@ -37,6 +37,7 @@ export const CitizenPortal: React.FC<Props> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedULPIN, setCopiedULPIN] = useState(false);
   const [showPropertyCardModal, setShowPropertyCardModal] = useState(false);
+  const [showCitizenPartition, setShowCitizenPartition] = useState(false);
 
   // Status filter state
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'CLEAN' | 'WARNING' | 'CRITICAL'>('ALL');
@@ -295,13 +296,37 @@ export const CitizenPortal: React.FC<Props> = ({
         />
       </div>
 
-      {/* 🌟 LAND PARTITION & FAIR DIVISION ASSISTANT */}
-      <LandDivisionAssistant
-        parcel={selectedParcel}
-        activePartition={activePartition}
-        onPartitionChange={onPartitionChange}
-        onSubmitToOfficer={onSubmitToOfficer}
-      />
+      {/* 🌟 LAND PARTITION & FAIR DIVISION ASSISTANT (Shown on Discrepancy or when requested) */}
+      {selectedParcel.status !== 'CLEAN' || selectedParcel.violations.length > 0 || showCitizenPartition ? (
+        <div className="space-y-2">
+          {selectedParcel.status !== 'CLEAN' && (
+            <div className="bg-[#D97706]/10 border border-[#D97706]/30 rounded-lg p-2.5 flex items-center justify-between text-xs text-[#D97706] font-semibold">
+              <span className="flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>Boundary / Title Discrepancy Detected — Land Division Assistant Activated</span>
+              </span>
+            </div>
+          )}
+          <LandDivisionAssistant
+            parcel={selectedParcel}
+            activePartition={activePartition}
+            onPartitionChange={onPartitionChange}
+            onSubmitToOfficer={onSubmitToOfficer}
+          />
+        </div>
+      ) : (
+        <div className="bg-[#FAF7F2] border border-[#E7DFD5] rounded-xl p-3 text-center">
+          <p className="text-xs text-[#6B6360] mb-2">
+            This parcel is verified and clean. Dividing this plot among family co-heirs or partners?
+          </p>
+          <button
+            onClick={() => setShowCitizenPartition(true)}
+            className="px-3 py-1.5 rounded-lg bg-white border border-[#E7DFD5] hover:border-[#C85A32] text-[#C85A32] text-xs font-semibold shadow-2xs hover:bg-[#FAF7F2] transition-colors"
+          >
+            + Request Land Partition / Co-Owner Division
+          </button>
+        </div>
+      )}
 
       {/* Property Card Modal */}
       {showPropertyCardModal && (

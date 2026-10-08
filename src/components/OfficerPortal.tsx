@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Parcel, PartitionResult, OfficerAuditEntry } from '../types';
+import { divideParcelEquitably } from '../services/partitionEngine';
 import {
   ShieldAlert,
   CheckCircle2,
@@ -15,6 +16,8 @@ import {
   Eye,
   Check,
   Building,
+  Scale,
+  Sparkles,
 } from 'lucide-react';
 
 interface Props {
@@ -40,6 +43,32 @@ export const OfficerPortal: React.FC<Props> = ({
   const [username, setUsername] = useState('officer_admin');
   const [password, setPassword] = useState('BhuSetu@2026');
   const [selectedNoticeParcel, setSelectedNoticeParcel] = useState<Parcel | null>(null);
+
+  // Statutory Officer Land Partition State
+  const [officerDivisionMode, setOfficerDivisionMode] = useState<'EQUAL' | 'CUSTOM'>('EQUAL');
+  const [officerShareholders, setOfficerShareholders] = useState([
+    { id: 'off-p-1', name: 'Party 1 (Shareholder A)', sharePercent: 50 },
+    { id: 'off-p-2', name: 'Party 2 (Shareholder B)', sharePercent: 50 },
+  ]);
+  const [computedOfficerPartition, setComputedOfficerPartition] = useState<PartitionResult | null>(null);
+
+  const handleOfficerComputePartition = () => {
+    const count = officerShareholders.length;
+    let shares = [...officerShareholders];
+    if (officerDivisionMode === 'EQUAL') {
+      const eq = Math.round((100 / count) * 10) / 10;
+      shares = shares.map((s, i) => ({
+        ...s,
+        sharePercent: i === count - 1 ? 100 - eq * (count - 1) : eq,
+      }));
+      setOfficerShareholders(shares);
+    }
+    const result = divideParcelEquitably(
+      selectedParcel,
+      shares.map((s) => ({ id: s.id, name: s.name, shareFraction: s.sharePercent / 100 }))
+    );
+    setComputedOfficerPartition(result);
+  };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -255,6 +284,196 @@ export const OfficerPortal: React.FC<Props> = ({
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 1B: STATUTORY OFFICER CIVIL PARTITION TOOL (Even Split / Custom Percentage) */}
+      <div className="bg-white border border-[#E7DFD5] rounded-xl p-4 shadow-xs space-y-3">
+        <div className="flex items-center justify-between border-b border-[#E7DFD5] pb-2.5">
+          <div className="flex items-center gap-2">
+            <Scale className="w-4 h-4 text-[#C85A32]" />
+            <div>
+              <h3 className="font-bold text-xs text-[#23201F] uppercase tracking-wider">
+                Statutory Land Partition & Division Tool (Survey No: {selectedParcel.surveyNumber})
+              </h3>
+              <p className="text-[11px] text-[#6B6360]">
+                Officer-directed sub-division: Select Even Split or custom percentage shares
+              </p>
+            </div>
+          </div>
+          {selectedParcel.status !== 'CLEAN' && (
+            <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">
+              Discrepancy Rectification Recommended
+            </span>
+          )}
+        </div>
+
+        {/* Division Mode Switcher */}
+        <div className="grid grid-cols-2 gap-2 bg-[#FAF7F2] p-1.5 rounded-lg border border-[#E7DFD5]">
+          <button
+            type="button"
+            onClick={() => {
+              setOfficerDivisionMode('EQUAL');
+              const count = officerShareholders.length;
+              const eq = Math.round((100 / count) * 10) / 10;
+              setOfficerShareholders(
+                officerShareholders.map((s, i) => ({
+                  ...s,
+                  sharePercent: i === count - 1 ? 100 - eq * (count - 1) : eq,
+                }))
+              );
+            }}
+            className={`py-1.5 px-2 rounded-md text-xs font-bold transition-all ${
+              officerDivisionMode === 'EQUAL'
+                ? 'bg-[#C85A32] text-white shadow-2xs'
+                : 'text-[#6B6360] hover:text-[#23201F]'
+            }`}
+          >
+            ⚖️ Split Land Evenly ({Math.round(100 / officerShareholders.length)}% Each)
+          </button>
+          <button
+            type="button"
+            onClick={() => setOfficerDivisionMode('CUSTOM')}
+            className={`py-1.5 px-2 rounded-md text-xs font-bold transition-all ${
+              officerDivisionMode === 'CUSTOM'
+                ? 'bg-[#C85A32] text-white shadow-2xs'
+                : 'text-[#6B6360] hover:text-[#23201F]'
+            }`}
+          >
+            ⚙️ Custom Specified Percentages
+          </button>
+        </div>
+
+        {/* Shareholders Inputs */}
+        <div className="space-y-2">
+          {officerShareholders.map((person, idx) => (
+            <div key={person.id} className="flex items-center gap-2 bg-[#FAF7F2] p-2 rounded-lg border border-[#E7DFD5]">
+              <span className="w-5 h-5 rounded-full bg-[#23201F] text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                {idx + 1}
+              </span>
+              <input
+                type="text"
+                value={person.name}
+                onChange={(e) => {
+                  const updated = [...officerShareholders];
+                  updated[idx].name = e.target.value;
+                  setOfficerShareholders(updated);
+                }}
+                className="flex-1 bg-white border border-[#E7DFD5] rounded px-2 py-1 text-xs text-[#23201F] font-medium focus:outline-none"
+                placeholder={`Party ${idx + 1}`}
+              />
+              <div className="flex items-center gap-1">
+                {officerDivisionMode === 'CUSTOM' ? (
+                  <div className="flex items-center gap-0.5">
+                    <input
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={person.sharePercent}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0;
+                        const updated = [...officerShareholders];
+                        updated[idx].sharePercent = val;
+                        setOfficerShareholders(updated);
+                      }}
+                      className="w-14 bg-white border border-[#E7DFD5] rounded px-1.5 py-1 text-xs text-right font-bold text-[#23201F]"
+                    />
+                    <span className="text-xs font-bold text-[#6B6360]">%</span>
+                  </div>
+                ) : (
+                  <span className="text-xs font-bold text-[#23201F] w-12 text-right">
+                    {person.sharePercent}%
+                  </span>
+                )}
+                {officerShareholders.length > 2 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = officerShareholders.filter((_, i) => i !== idx);
+                      const eq = Math.round((100 / updated.length) * 10) / 10;
+                      setOfficerShareholders(
+                        updated.map((s, i) => ({
+                          ...s,
+                          sharePercent: i === updated.length - 1 ? 100 - eq * (updated.length - 1) : eq,
+                        }))
+                      );
+                    }}
+                    className="text-gray-400 hover:text-red-500 text-xs px-1"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {/* Add Co-owner */}
+          {officerShareholders.length < 5 && (
+            <button
+              type="button"
+              onClick={() => {
+                const next = officerShareholders.length + 1;
+                const updated = [...officerShareholders, { id: `off-p-${next}`, name: `Party ${next}`, sharePercent: 0 }];
+                const eq = Math.round((100 / updated.length) * 10) / 10;
+                setOfficerShareholders(
+                  updated.map((s, i) => ({
+                    ...s,
+                    sharePercent: i === updated.length - 1 ? 100 - eq * (updated.length - 1) : eq,
+                  }))
+                );
+              }}
+              className="text-[11px] text-[#C85A32] font-semibold hover:underline"
+            >
+              + Add Another Shareholder / Co-heir ({officerShareholders.length + 1})
+            </button>
+          )}
+        </div>
+
+        {/* Compute & Preview Partition Button */}
+        <div className="flex gap-2 pt-1">
+          <button
+            type="button"
+            onClick={handleOfficerComputePartition}
+            className="flex-1 py-2 px-3 rounded-lg bg-[#23201F] text-white hover:bg-[#383432] transition-colors text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>Compute Geodesic Sub-Division</span>
+          </button>
+        </div>
+
+        {/* Computed Partition Approval Box */}
+        {computedOfficerPartition && (
+          <div className="bg-[#FAF7F2] border border-[#276728]/30 rounded-xl p-3 space-y-2.5">
+            <div className="flex items-center justify-between text-xs font-bold text-[#276728]">
+              <span>✓ Computed {computedOfficerPartition.splits.length} Sub-Parcels</span>
+              <span className="bg-[#276728]/10 px-2 py-0.5 rounded-full">
+                {computedOfficerPartition.parityScore}% Area Parity
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {computedOfficerPartition.splits.map((split) => (
+                <div
+                  key={split.shareholderId}
+                  className="bg-white p-2 rounded-lg border-l-4 border shadow-2xs text-[11px]"
+                  style={{ borderLeftColor: split.color }}
+                >
+                  <p className="font-bold text-[#23201F] truncate">{split.shareholderName}</p>
+                  <p className="text-[#6B6360]">Sub-Survey: <strong>{split.subSurveyNo}</strong></p>
+                  <p className="text-[#276728] font-bold">{split.areaSqm} m² ({split.sharePercentage}%)</p>
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleApproveSubdivision(computedOfficerPartition)}
+              className="w-full py-2 px-3 rounded-lg bg-[#276728] text-white hover:bg-[#1E5220] transition-colors text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs"
+            >
+              <Check className="w-4 h-4" />
+              <span>Approve Partition Mutation & Issue Sub-ULPINs</span>
+            </button>
           </div>
         )}
       </div>

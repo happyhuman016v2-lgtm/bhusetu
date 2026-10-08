@@ -28,6 +28,7 @@ export const App: React.FC = () => {
   const [activePartition, setActivePartition] = useState<PartitionResult | undefined>();
   const [pendingPartitions, setPendingPartitions] = useState<PartitionResult[]>([]);
   const [isRegistryModalOpen, setIsRegistryModalOpen] = useState(false);
+  const [isMapExpanded, setIsMapExpanded] = useState(false);
 
   // Initial audit log entries
   const [auditLogs, setAuditLogs] = useState<OfficerAuditEntry[]>([
@@ -109,39 +110,47 @@ export const App: React.FC = () => {
         totalParcelsCount={parcels.length}
       />
 
-      {/* Main Content: 2-Column Split View */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Citizen or Officer Portal */}
-        <div className="lg:col-span-5 xl:col-span-5 overflow-y-auto max-h-[calc(100vh-120px)] pr-1">
-          {activeRole === 'citizen' ? (
-            <CitizenPortal
-              parcels={parcels}
-              selectedParcel={selectedParcel}
-              onSelectParcel={handleSelectParcel}
-              activePartition={activePartition}
-              onPartitionChange={setActivePartition}
-              onSubmitToOfficer={handleSubmitPartitionToOfficer}
-            />
-          ) : (
-            <OfficerPortal
-              parcels={parcels}
-              selectedParcel={selectedParcel}
-              onSelectParcel={handleSelectParcel}
-              pendingPartitions={pendingPartitions}
-              onApprovePartition={handleApprovePartition}
-              auditLogs={auditLogs}
-              onAddAuditLog={handleAddAuditLog}
-            />
-          )}
-        </div>
+      {/* Main Content: 2-Column Split View with Expandable Map */}
+      <main className="flex-1 w-full max-w-[1850px] mx-auto p-2 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Left Column: Citizen or Officer Portal (Hidden when Map is Expanded) */}
+        {!isMapExpanded && (
+          <div className="lg:col-span-4 xl:col-span-3.5 overflow-y-auto max-h-[calc(100vh-100px)] pr-1">
+            {activeRole === 'citizen' ? (
+              <CitizenPortal
+                parcels={parcels}
+                selectedParcel={selectedParcel}
+                onSelectParcel={handleSelectParcel}
+                activePartition={activePartition}
+                onPartitionChange={setActivePartition}
+                onSubmitToOfficer={handleSubmitPartitionToOfficer}
+              />
+            ) : (
+              <OfficerPortal
+                parcels={parcels}
+                selectedParcel={selectedParcel}
+                onSelectParcel={handleSelectParcel}
+                pendingPartitions={pendingPartitions}
+                onApprovePartition={handleApprovePartition}
+                auditLogs={auditLogs}
+                onAddAuditLog={handleAddAuditLog}
+              />
+            )}
+          </div>
+        )}
 
-        {/* Right Column: Interactive Map */}
-        <div className="lg:col-span-7 xl:col-span-7 h-[550px] lg:h-[calc(100vh-120px)] sticky top-20">
+        {/* Right Column: Interactive Map (Expands to full width when isMapExpanded is true) */}
+        <div
+          className={`${
+            isMapExpanded ? 'lg:col-span-12' : 'lg:col-span-8 xl:col-span-8.5'
+          } h-[600px] lg:h-[calc(100vh-100px)] sticky top-18`}
+        >
           <MapEngine
             parcels={parcels}
             selectedParcelId={selectedParcelId}
             onSelectParcel={handleSelectParcel}
             activePartition={activePartition}
+            isMapExpanded={isMapExpanded}
+            onToggleExpandMap={() => setIsMapExpanded(!isMapExpanded)}
           />
         </div>
       </main>
