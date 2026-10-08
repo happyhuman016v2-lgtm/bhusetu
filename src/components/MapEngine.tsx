@@ -89,6 +89,10 @@ export const MapEngine: React.FC<Props> = ({
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
+    if ((maplibregl as any).config) {
+      (maplibregl as any).config.WORKER_URL = '/maplibre-gl-worker.mjs';
+    }
+
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       style: BASE_MAP_STYLE,
