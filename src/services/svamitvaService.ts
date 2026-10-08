@@ -82,3 +82,50 @@ export function generateClientGeodesicBuffer(
   const km = meters / 1000.0;
   return turf.buffer(polygon, km, { units: 'kilometers', steps: 32 }) as any;
 }
+
+/**
+ * Fetch comprehensive Record of Rights (RoR) title dossier for a parcel
+ */
+export async function fetchRoRDossier(parcelId: string): Promise<any | null> {
+  try {
+    const res = await fetch(`${API_BASE}/ror/parcel/${encodeURIComponent(parcelId)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn(`RoR dossier fetch failed for ${parcelId}:`, err);
+    return null;
+  }
+}
+
+/**
+ * Fetch downloadable / printable SVAMITVA Digital Property Card (Gharouni)
+ */
+export async function fetchPropertyCard(parcelId: string): Promise<any | null> {
+  try {
+    const res = await fetch(`${API_BASE}/ror/parcel/${encodeURIComponent(parcelId)}/property-card`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn(`Property card fetch failed for ${parcelId}:`, err);
+    return null;
+  }
+}
+
+/**
+ * Trigger batch derivation of RoR records from drone survey parcels
+ */
+export async function deriveVillageRoRs(parcelIds?: string[]): Promise<any | null> {
+  try {
+    const res = await fetch(`${API_BASE}/ror/derive-from-parcels`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parcel_ids: parcelIds }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('RoR derivation API failed:', err);
+    return null;
+  }
+}
+

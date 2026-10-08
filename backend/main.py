@@ -35,6 +35,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from routes.ror_routes import router as ror_router
+app.include_router(ror_router)
+
 DATA_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "raw", "drone_parcels_raw.geojson")
 
 

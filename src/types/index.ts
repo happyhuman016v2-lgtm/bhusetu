@@ -182,3 +182,138 @@ export interface EncroachmentAnalysisResult {
   };
 }
 
+export interface ChauhaddiNeighbor {
+  boundary_type: 'PARCEL' | 'PUBLIC_ROAD' | 'CORRIDOR';
+  plot_no: string;
+  owner: string;
+  land_type?: string;
+  property_id?: string;
+  description: string;
+}
+
+export interface RoRPattadar {
+  pattadar_id: string;
+  name: string;
+  relation: string;
+  share_pct: number;
+  equity_area_sqm: number;
+  status: string;
+}
+
+export interface RoREncumbrance {
+  encumbrance_id: string;
+  type: string;
+  institution: string;
+  description: string;
+  registered_date: string;
+  amount_rupees?: number;
+  status: string;
+}
+
+export interface RoRDisputeFlag {
+  flag_code: string;
+  severity: 'CRITICAL' | 'WARNING' | 'INFO';
+  title: string;
+  description: string;
+  statutory_ref: string;
+}
+
+export interface RoRDossier {
+  parcel_id: string;
+  ulpin: string;
+  scheme: string;
+  gharouni_card_no: string;
+  khata_number: string;
+  khasra_number: string;
+  survey_plot_no: string;
+  tenure_type: string;
+  spatial: {
+    centroid_wgs84: [number, number];
+    actual_drone_area_sqm: number;
+    actual_drone_area_acres: number;
+    accuracy_class: string;
+    survey_date: string;
+  };
+  legal_registry: {
+    recorded_legal_area_sqm: number;
+    recorded_legal_area_acres: number;
+    area_unit_regional: string;
+    registry_source: string;
+  };
+  variance_analysis: {
+    variance_sqm: number;
+    variance_pct: number;
+    within_statutory_tolerance: boolean;
+    evaluation: string;
+  };
+  chauhaddi: {
+    north: ChauhaddiNeighbor;
+    south: ChauhaddiNeighbor;
+    east: ChauhaddiNeighbor;
+    west: ChauhaddiNeighbor;
+  };
+  pattadars: RoRPattadar[];
+  encumbrances: RoREncumbrance[];
+  dispute_flags: RoRDisputeFlag[];
+  title_confidence: {
+    score: number;
+    grade: 'A' | 'B' | 'C' | 'D' | 'F';
+    status: string;
+  };
+  location: {
+    village: string;
+    tehsil: string;
+    district: string;
+    state: string;
+    village_lgd_code: string;
+  };
+}
+
+export interface PropertyCardCertificate {
+  certificate_type: string;
+  issuing_authority: string;
+  ulpin: string;
+  gharouni_card_no: string;
+  khata_number: string;
+  khasra_number: string;
+  survey_plot_no: string;
+  tenure_category: string;
+  pattadar_summary: RoRPattadar[];
+  primary_owner: string;
+  father_husband_name: string;
+  spatial_footprint: {
+    uav_drone_area_sqm: number;
+    uav_drone_area_acres: number;
+    regional_area_display: string;
+    centroid_coordinates: [number, number];
+    accuracy_class: string;
+    survey_date: string;
+  };
+  variance_audit: {
+    recorded_revenue_area_sqm: number;
+    variance_percentage: string;
+    statutory_tolerance_status: string;
+  };
+  chauhaddi_boundaries: string;
+  title_confidence: {
+    score: number;
+    grade: 'A' | 'B' | 'C' | 'D' | 'F';
+    status: string;
+  };
+  encumbrance_status: string;
+  qr_verification: {
+    qr_hash: string;
+    verification_url: string;
+    ledger_anchor: string;
+  };
+  statutory_memorandum: string;
+  location: {
+    village: string;
+    tehsil: string;
+    district: string;
+    state: string;
+    village_lgd_code: string;
+  };
+}
+
+

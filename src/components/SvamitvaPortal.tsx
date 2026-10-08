@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   SvamitvaParcel,
   EncroachmentConflict,
   EncroachmentAnalysisResult,
+  RoRDossier,
+  PropertyCardCertificate,
 } from '../types';
+import {
+  fetchRoRDossier,
+  fetchPropertyCard,
+} from '../services/svamitvaService';
+import { RoRDossierModal } from './RoRDossierModal';
 import {
   ShieldAlert,
   Sliders,
@@ -11,13 +18,19 @@ import {
   FileText,
   MapPin,
   Search,
-  ExternalLink,
   Building2,
   AlertTriangle,
   QrCode,
-  Download,
   Printer,
   Sparkles,
+  Scale,
+  Compass,
+  Users,
+  Copy,
+  Check,
+  Maximize2,
+  Landmark,
+  ChevronRight,
 } from 'lucide-react';
 
 interface Props {
@@ -43,9 +56,39 @@ export const SvamitvaPortal: React.FC<Props> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [landTypeFilter, setLandTypeFilter] = useState<string>('ALL');
-  const [activeTab, setActiveTab] = useState<'parcels' | 'disputes' | 'card'>('parcels');
+  const [activeTab, setActiveTab] = useState<'parcels' | 'ror' | 'disputes' | 'card'>('parcels');
   const [showNoticeModal, setShowNoticeModal] = useState(false);
   const [selectedConflict, setSelectedConflict] = useState<EncroachmentConflict | null>(null);
+
+  // RoR state
+  const [dossier, setDossier] = useState<RoRDossier | null>(null);
+  const [loadingRoR, setLoadingRoR] = useState<boolean>(false);
+  const [isDossierModalOpen, setIsDossierModalOpen] = useState<boolean>(false);
+  const [copiedULPIN, setCopiedULPIN] = useState<boolean>(false);
+
+  // Load RoR dossier whenever selectedParcel changes
+  useEffect(() => {
+    if (!selectedParcel) return;
+    let isMounted = true;
+    setLoadingRoR(true);
+
+    fetchRoRDossier(selectedParcel.id)
+      .then((data) => {
+        if (isMounted && data) {
+          setDossier(data);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to load RoR for selected parcel:', err);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingRoR(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedParcel.id]);
 
   // Filter parcels
   const filteredParcels = parcels.filter((p) => {
@@ -70,6 +113,12 @@ export const SvamitvaPortal: React.FC<Props> = ({
   const handleOpenNotice = (conflict: EncroachmentConflict) => {
     setSelectedConflict(conflict);
     setShowNoticeModal(true);
+  };
+
+  const handleCopyULPIN = (ulpin: string) => {
+    navigator.clipboard.writeText(ulpin);
+    setCopiedULPIN(true);
+    setTimeout(() => setCopiedULPIN(false), 2000);
   };
 
   return (
@@ -142,6 +191,19 @@ export const SvamitvaPortal: React.FC<Props> = ({
         >
           Parcels ({parcels.length})
         </button>
+
+        <button
+          onClick={() => setActiveTab('ror')}
+          className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all flex items-center justify-center gap-1 ${
+            activeTab === 'ror'
+              ? 'bg-[#23201F] text-white shadow-xs'
+              : 'hover:bg-white/40 text-[#C85A32]'
+          }`}
+        >
+          <Scale className="w-3.5 h-3.5" />
+          <span>RoR Title</span>
+        </button>
+
         <button
           onClick={() => setActiveTab('disputes')}
           className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all flex items-center justify-center gap-1 ${
@@ -153,6 +215,7 @@ export const SvamitvaPortal: React.FC<Props> = ({
           <ShieldAlert className="w-3.5 h-3.5 text-red-500" />
           <span>Disputes ({conflicts.length})</span>
         </button>
+
         <button
           onClick={() => setActiveTab('card')}
           className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all flex items-center justify-center gap-1 ${
@@ -162,7 +225,7 @@ export const SvamitvaPortal: React.FC<Props> = ({
           }`}
         >
           <FileText className="w-3.5 h-3.5 text-[#C85A32]" />
-          <span>Gharouni Card</span>
+          <span>Gharouni</span>
         </button>
       </div>
 
@@ -219,7 +282,7 @@ export const SvamitvaPortal: React.FC<Props> = ({
                     <div>
                       <div className="flex items-center gap-1.5">
                         <span className="font-bold text-xs text-[#23201F]">
-                          {props.survey_plot_no}
+                          Plot {props.survey_plot_no}
                         </span>
                         <span
                           className={`text-[10px] px-1.5 py-0.2 rounded font-semibold ${
@@ -246,6 +309,31 @@ export const SvamitvaPortal: React.FC<Props> = ({
                       </span>
                     </div>
                   </div>
+
+                  {isSelected && (
+                    <div className="flex items-center justify-end gap-2 pt-2 mt-2 border-t border-[#C85A32]/20">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveTab('ror');
+                        }}
+                        className="px-2.5 py-1 text-[11px] font-bold text-[#C85A32] hover:bg-[#C85A32]/10 rounded-lg transition-colors flex items-center gap-1"
+                      >
+                        <Scale className="w-3.5 h-3.5" />
+                        <span>View RoR Dossier</span>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsDossierModalOpen(true);
+                        }}
+                        className="px-2.5 py-1 text-[11px] font-bold text-white bg-[#23201F] hover:bg-black rounded-lg transition-colors flex items-center gap-1 shadow-2xs"
+                      >
+                        <Maximize2 className="w-3 h-3" />
+                        <span>Open Modal</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -253,7 +341,227 @@ export const SvamitvaPortal: React.FC<Props> = ({
         </div>
       )}
 
-      {/* TAB 2: ROAD RIGHT-OF-WAY ENCROACHMENTS & DISPUTES */}
+      {/* TAB 2: INTERACTIVE ROR LAND TITLE DOSSIER SIDE PANE */}
+      {activeTab === 'ror' && (
+        <div className="space-y-3.5 animate-in fade-in duration-150">
+          {loadingRoR ? (
+            <div className="bg-white p-8 rounded-2xl border border-[#E7DFD5] text-center space-y-2">
+              <div className="w-8 h-8 border-3 border-[#C85A32] border-t-transparent rounded-full animate-spin mx-auto" />
+              <p className="text-xs font-semibold text-[#23201F]">
+                Computing ULPIN & reconciling Record of Rights...
+              </p>
+            </div>
+          ) : dossier ? (
+            <div className="space-y-3">
+              {/* ULPIN Header Box */}
+              <div className="bg-white p-3.5 rounded-2xl border border-[#E7DFD5] shadow-2xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                    Bhu-Aadhaar / ULPIN (DoLR Standard)
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded font-black text-white ${
+                        dossier.title_confidence.grade === 'A'
+                          ? 'bg-emerald-600'
+                          : dossier.title_confidence.grade === 'B'
+                          ? 'bg-blue-600'
+                          : dossier.title_confidence.grade === 'C'
+                          ? 'bg-amber-500'
+                          : 'bg-red-600'
+                      }`}
+                    >
+                      Grade {dossier.title_confidence.grade} • {dossier.title_confidence.score}/100
+                    </span>
+                    <button
+                      onClick={() => setIsDossierModalOpen(true)}
+                      className="p-1 text-gray-400 hover:text-[#23201F] rounded transition-colors"
+                      title="Enlarge RoR Dossier"
+                    >
+                      <Maximize2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between bg-[#FAF7F2] p-2.5 rounded-xl border border-[#E7DFD5]">
+                  <span className="font-mono text-base font-black text-[#23201F] tracking-wide">
+                    {dossier.ulpin}
+                  </span>
+                  <button
+                    onClick={() => handleCopyULPIN(dossier.ulpin)}
+                    className="p-1 rounded-md hover:bg-white text-gray-600 transition-colors"
+                    title="Copy ULPIN"
+                  >
+                    {copiedULPIN ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                  <div>
+                    <span className="text-gray-500 block">Khasra / Plot:</span>
+                    <span className="font-bold text-[#23201F]">{dossier.khasra_number}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 block">Khatauni Family No:</span>
+                    <span className="font-bold text-[#23201F]">{dossier.khata_number}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* AREA COMPARISON BADGE & RECONCILIATION */}
+              <div className="bg-white p-3.5 rounded-2xl border border-[#E7DFD5] shadow-2xs space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#23201F] flex items-center gap-1.5">
+                    <Scale className="w-3.5 h-3.5 text-[#C85A32]" />
+                    Area Discrepancy Reconciliation
+                  </span>
+                  <span
+                    className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
+                      Math.abs(dossier.variance_analysis.variance_pct) <= 3.0
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : Math.abs(dossier.variance_analysis.variance_pct) <= 6.0
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}
+                  >
+                    {Math.abs(dossier.variance_analysis.variance_pct) <= 3.0
+                      ? 'Verified'
+                      : Math.abs(dossier.variance_analysis.variance_pct) <= 6.0
+                      ? 'Minor Deviation'
+                      : 'High Dispute Risk'}
+                  </span>
+                </div>
+
+                {/* Prominent Comparison Badge */}
+                <div
+                  className={`p-2.5 rounded-xl text-xs font-semibold space-y-1 ${
+                    Math.abs(dossier.variance_analysis.variance_pct) <= 3.0
+                      ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+                      : Math.abs(dossier.variance_analysis.variance_pct) <= 6.0
+                      ? 'bg-amber-50 text-amber-900 border border-amber-200'
+                      : 'bg-red-50 text-red-900 border border-red-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span>
+                      Drone Area: <strong>{dossier.spatial.actual_drone_area_sqm} m²</strong>
+                    </span>
+                    <span>
+                      Registry Area: <strong>{dossier.legal_registry.recorded_legal_area_sqm} m²</strong>
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between pt-1 border-t border-black/10 text-xs">
+                    <span>Variance Mismatch:</span>
+                    <span className="font-mono font-bold">
+                      {dossier.variance_analysis.variance_pct > 0 ? '+' : ''}
+                      {dossier.variance_analysis.variance_pct.toFixed(1)}% ({dossier.variance_analysis.variance_sqm > 0 ? '+' : ''}{dossier.variance_analysis.variance_sqm} m²)
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* CO-OWNERS WITH SPLIT EQUITY BARS */}
+              <div className="bg-white p-3.5 rounded-2xl border border-[#E7DFD5] shadow-2xs space-y-2">
+                <span className="text-xs font-bold text-[#23201F] flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-[#C85A32]" />
+                  Pattadar Co-Owners & Equity Split
+                </span>
+
+                <div className="space-y-2">
+                  {dossier.pattadars.map((p, idx) => (
+                    <div key={idx} className="bg-[#FAF7F2] p-2 rounded-xl border border-[#E7DFD5] space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <div>
+                          <span className="font-bold text-[#23201F]">{p.name}</span>
+                          <span className="text-[10px] text-gray-500 ml-1">({p.relation})</span>
+                        </div>
+                        <span className="font-mono font-bold text-[#C85A32]">
+                          {p.share_pct}% ({p.equity_area_sqm} m²)
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="bg-[#C85A32] h-1.5 rounded-full"
+                          style={{ width: `${p.share_pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* CHAUHADDI 4-POINT NEIGHBORS */}
+              <div className="bg-white p-3.5 rounded-2xl border border-[#E7DFD5] shadow-2xs space-y-2">
+                <span className="text-xs font-bold text-[#23201F] flex items-center gap-1.5">
+                  <Compass className="w-3.5 h-3.5 text-[#C85A32]" />
+                  Chauhaddi Adjoining Neighbors
+                </span>
+
+                <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                  <div className="p-2 rounded-lg bg-blue-50/70 border border-blue-200">
+                    <span className="text-[9px] font-bold text-blue-900 uppercase block">North</span>
+                    <span className="font-semibold text-[#23201F] truncate block">
+                      {dossier.chauhaddi.north.owner}
+                    </span>
+                    <span className="text-[10px] text-gray-500 font-mono">
+                      {dossier.chauhaddi.north.plot_no}
+                    </span>
+                  </div>
+                  <div className="p-2 rounded-lg bg-amber-50/70 border border-amber-200">
+                    <span className="text-[9px] font-bold text-amber-900 uppercase block">South</span>
+                    <span className="font-semibold text-[#23201F] truncate block">
+                      {dossier.chauhaddi.south.owner}
+                    </span>
+                    <span className="text-[10px] text-gray-500 font-mono">
+                      {dossier.chauhaddi.south.plot_no}
+                    </span>
+                  </div>
+                  <div className="p-2 rounded-lg bg-purple-50/70 border border-purple-200">
+                    <span className="text-[9px] font-bold text-purple-900 uppercase block">East</span>
+                    <span className="font-semibold text-[#23201F] truncate block">
+                      {dossier.chauhaddi.east.owner}
+                    </span>
+                    <span className="text-[10px] text-gray-500 font-mono">
+                      {dossier.chauhaddi.east.plot_no}
+                    </span>
+                  </div>
+                  <div className="p-2 rounded-lg bg-teal-50/70 border border-teal-200">
+                    <span className="text-[9px] font-bold text-teal-900 uppercase block">West</span>
+                    <span className="font-semibold text-[#23201F] truncate block">
+                      {dossier.chauhaddi.west.owner}
+                    </span>
+                    <span className="text-[10px] text-gray-500 font-mono">
+                      {dossier.chauhaddi.west.plot_no}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ACTION: EXPORT DIGITAL PROPERTY CARD */}
+              <div className="pt-1">
+                <button
+                  onClick={() => setIsDossierModalOpen(true)}
+                  className="w-full py-2.5 px-3 bg-[#C85A32] text-white rounded-xl text-xs font-bold hover:bg-[#a64420] transition-colors flex items-center justify-center gap-2 shadow-xs"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Export RoR Title Certificate / Gharouni Card</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-6 text-xs text-gray-500">
+              Select a parcel to inspect its Record of Rights dossier.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 3: ROAD RIGHT-OF-WAY ENCROACHMENTS & DISPUTES */}
       {activeTab === 'disputes' && (
         <div className="space-y-3">
           <div className="bg-red-50 p-3 rounded-xl border border-red-200 text-xs text-red-900 flex items-center justify-between">
@@ -336,7 +644,7 @@ export const SvamitvaPortal: React.FC<Props> = ({
         </div>
       )}
 
-      {/* TAB 3: GHAROUNI DIGITAL PROPERTY CARD */}
+      {/* TAB 4: GHAROUNI DIGITAL PROPERTY CARD */}
       {activeTab === 'card' && (
         <div className="space-y-3">
           <div className="bg-white border-2 border-[#C85A32] rounded-2xl p-4 shadow-sm space-y-3.5 relative overflow-hidden">
@@ -398,6 +706,14 @@ export const SvamitvaPortal: React.FC<Props> = ({
                 <span className="text-[#276728] font-bold">Drone Survey Certified</span>
               </div>
             </div>
+
+            <button
+              onClick={() => setIsDossierModalOpen(true)}
+              className="w-full mt-2 py-2 px-3 bg-[#23201F] text-white rounded-xl text-xs font-bold hover:bg-black transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print Official Gharouni Title</span>
+            </button>
           </div>
         </div>
       )}
@@ -460,6 +776,14 @@ export const SvamitvaPortal: React.FC<Props> = ({
           </div>
         </div>
       )}
+
+      {/* FULL ROR LAND TITLE DOSSIER MODAL */}
+      <RoRDossierModal
+        isOpen={isDossierModalOpen}
+        onClose={() => setIsDossierModalOpen(false)}
+        parcelId={selectedParcel.id}
+        fallbackParcel={selectedParcel}
+      />
     </div>
   );
 };
