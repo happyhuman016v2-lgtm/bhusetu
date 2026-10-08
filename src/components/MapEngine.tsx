@@ -592,17 +592,36 @@ export const MapEngine: React.FC<Props> = ({
       id: `${prefix}svamitva-labels`,
       type: 'symbol',
       source: `${prefix}svamitva-source`,
-      minzoom: 15.0,
+      minzoom: 17.0,
       layout: {
         'text-field': ['get', 'survey_plot_no'],
-        'text-size': 11,
+        'text-size': 10,
         'text-anchor': 'center',
         'text-allow-overlap': false,
       },
       paint: {
         'text-color': '#FFFFFF',
         'text-halo-color': '#000000',
-        'text-halo-width': 3.0,
+        'text-halo-width': 2.5,
+      },
+    });
+    // Dedicated layer for selected parcel label (always visible at zoom >= 13.5)
+    map.addLayer({
+      id: `${prefix}svamitva-selected-label`,
+      type: 'symbol',
+      source: `${prefix}svamitva-source`,
+      filter: ['==', ['get', 'isSelected'], true],
+      minzoom: 13.5,
+      layout: {
+        'text-field': ['concat', 'Plot ', ['get', 'survey_plot_no']],
+        'text-size': 12,
+        'text-anchor': 'center',
+        'text-allow-overlap': true,
+      },
+      paint: {
+        'text-color': '#FFEA00',
+        'text-halo-color': '#000000',
+        'text-halo-width': 3.5,
       },
     });
 
@@ -768,6 +787,29 @@ export const MapEngine: React.FC<Props> = ({
       }
     }
   }, [datasetMode]);
+
+  // Fit viewport to full dataset bounds when a new survey dataset is loaded
+  const prevSvamitvaCountRef = useRef<number>(svamitvaParcels.length);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || datasetMode !== 'svamitva' || svamitvaParcels.length === 0) return;
+
+    if (prevSvamitvaCountRef.current !== svamitvaParcels.length) {
+      prevSvamitvaCountRef.current = svamitvaParcels.length;
+      try {
+        const fc: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: svamitvaParcels as any };
+        const bbox = turf.bbox(fc);
+        if (bbox && isFinite(bbox[0]) && isFinite(bbox[1]) && isFinite(bbox[2]) && isFinite(bbox[3])) {
+          map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, duration: 900 });
+          if (mapRightRef.current) {
+            mapRightRef.current.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, duration: 900 });
+          }
+        }
+      } catch (err) {
+        console.warn('Dataset fitBounds error:', err);
+      }
+    }
+  }, [svamitvaParcels, datasetMode]);
 
   // Automatically fly to selected TRACGIS parcel
   useEffect(() => {

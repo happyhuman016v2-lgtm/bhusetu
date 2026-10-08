@@ -248,40 +248,81 @@ export const SvamitvaPortal: React.FC<Props> = ({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               {sourceMeta?.state === 'CONFIGURED_WFS' && (
-                <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
                   <Globe className="w-3 h-3" />
-                  <span>OGC WFS Source</span>
+                  <span>DATA SOURCE: CONFIGURED GIS / WFS</span>
                 </span>
               )}
               {sourceMeta?.state === 'UPLOADED_FILE' && (
-                <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
+                <span className="px-2.5 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
                   <Upload className="w-3 h-3" />
-                  <span>Uploaded Survey File</span>
+                  <span>DATA SOURCE: IMPORTED SURVEY FILE</span>
                 </span>
               )}
               {sourceMeta?.state === 'SYNTHETIC_DEMO' && (
-                <span className="px-2 py-0.5 rounded-full bg-amber-600 text-white text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-600 text-white text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
                   <Database className="w-3 h-3" />
-                  <span>Synthetic Demo Dataset</span>
+                  <span>DATA SOURCE: SYNTHETIC DEMONSTRATION</span>
                 </span>
               )}
               {(!sourceMeta || sourceMeta.state === 'NO_SOURCE') && (
-                <span className="px-2 py-0.5 rounded-full bg-gray-600 text-white text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
+                <span className="px-2.5 py-0.5 rounded-full bg-gray-600 text-white text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
                   <AlertCircle className="w-3 h-3" />
-                  <span>No Survey Source Configured</span>
+                  <span>DATA SOURCE: NO SURVEY DATA</span>
                 </span>
               )}
               <span className="text-gray-400 text-xs font-mono">
-                LGD Code: {selectedParcel?.properties?.village_lgd_code || '142890'}
+                LGD: {selectedParcel?.properties?.village_lgd_code || '142890'}
               </span>
             </div>
-            <h2 className="text-base font-bold text-[#FBF9F5] mt-1 flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-[#C85A32]" />
-              {selectedParcel?.properties?.village || 'Rampur Kalan (Abadi)'}
-            </h2>
-            <p className="text-xs text-gray-300 mt-0.5">
-              Tehsil {selectedParcel?.properties?.tehsil || 'Bakshi Ka Talab'}, Dist. {selectedParcel?.properties?.district || 'Lucknow'}, {selectedParcel?.properties?.state || 'Uttar Pradesh'}
-            </p>
+
+            {sourceMeta?.state === 'SYNTHETIC_DEMO' ? (
+              <>
+                <h2 className="text-base font-bold text-[#FBF9F5] mt-1 flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-[#C85A32]" />
+                  Abadi Demonstration Dataset — {parcels.length} Parcels
+                </h2>
+                <p className="text-[11px] text-amber-300 font-medium mt-0.5">
+                  Not official cadastral or government survey data. (Synthetic fixture for engine evaluation)
+                </p>
+                <p className="text-xs text-gray-400">
+                  Tehsil {selectedParcel?.properties?.tehsil || 'Bakshi Ka Talab'}, Dist. {selectedParcel?.properties?.district || 'Lucknow'}, {selectedParcel?.properties?.state || 'Uttar Pradesh'}
+                </p>
+              </>
+            ) : sourceMeta?.state === 'UPLOADED_FILE' ? (
+              <>
+                <h2 className="text-base font-bold text-[#FBF9F5] mt-1 flex items-center gap-2">
+                  <FileCheck className="w-4 h-4 text-emerald-400" />
+                  {sourceMeta?.original_filename || 'Uploaded Survey Dataset'} — {parcels.length} Parcels
+                </h2>
+                <p className="text-[11px] text-blue-200 mt-0.5">
+                  Supplier: {sourceMeta?.supplier || 'Field Team'} • Date: {sourceMeta?.survey_date || 'Unknown'} • SHA-256: {sourceMeta?.sha256_checksum ? `${sourceMeta.sha256_checksum.slice(0, 12)}...` : 'N/A'}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {selectedParcel?.properties?.village ? `Village ${selectedParcel.properties.village}` : 'Village: UNKNOWN'} • {selectedParcel?.properties?.tehsil || 'Tehsil UNKNOWN'}, {selectedParcel?.properties?.district || 'District UNKNOWN'}
+                </p>
+              </>
+            ) : sourceMeta?.state === 'CONFIGURED_WFS' ? (
+              <>
+                <h2 className="text-base font-bold text-[#FBF9F5] mt-1 flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-emerald-400" />
+                  {sourceMeta?.source_type || 'WFS Cadastral Layer'} — {parcels.length} Parcels
+                </h2>
+                <p className="text-[11px] text-emerald-200 mt-0.5">
+                  Connected to OGC WFS Service: {sourceMeta?.original_filename || 'Remote WFS'}
+                </p>
+              </>
+            ) : (
+              <>
+                <h2 className="text-base font-bold text-[#FBF9F5] mt-1 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-gray-400" />
+                  No Survey Data Loaded
+                </h2>
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                  Upload survey geometry in the 'Source & Ingest' tab to begin cadastral analysis.
+                </p>
+              </>
+            )}
           </div>
           <div className="text-right shrink-0">
             <span className="text-[10px] text-gray-400 block">Resolution</span>
@@ -669,6 +710,121 @@ export const SvamitvaPortal: React.FC<Props> = ({
               ))}
             </div>
           </div>
+
+          {/* SELECTED PARCEL & ANALYSIS SUMMARY CARD */}
+          {selectedParcel && (
+            <div className="bg-[#FAF7F2] p-3 rounded-xl border border-[#E7DFD5] space-y-2 text-xs">
+              <div className="flex items-center justify-between pb-1 border-b border-[#E7DFD5]">
+                <span className="font-bold text-[#23201F] flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-[#C85A32]" />
+                  <span>Selected Parcel Inspection</span>
+                </span>
+                <span className="text-[10px] font-mono font-bold bg-white px-2 py-0.5 rounded border border-[#E7DFD5] text-[#C85A32]">
+                  Plot {selectedParcel.properties.survey_plot_no}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                {/* PARCEL Column */}
+                <div className="space-y-1 bg-white p-2.5 rounded-lg border border-[#E7DFD5]">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
+                    PARCEL
+                  </span>
+                  <div>
+                    <span className="text-gray-500">ID: </span>
+                    <span className="font-mono font-bold text-gray-800">
+                      {selectedParcel.properties.survey_plot_no || selectedParcel.id}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Source: </span>
+                    <span className="font-medium text-gray-800">
+                      {sourceMeta?.source_type || (sourceMeta?.state === 'SYNTHETIC_DEMO' ? 'Synthetic Demo' : 'Imported GeoJSON')}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Area: </span>
+                    <span className="font-mono font-bold text-emerald-700">
+                      {selectedParcel.properties.area_sq_mtr} m²
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Survey date: </span>
+                    <span className="text-gray-700">
+                      {selectedParcel.properties.survey_date || sourceMeta?.survey_date || 'Unknown'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Dataset: </span>
+                    <span className="font-mono text-purple-700 text-[10px]">
+                      {sourceMeta?.dataset_id || 'ds-active'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* ANALYSIS Column */}
+                <div className="space-y-1 bg-white p-2.5 rounded-lg border border-[#E7DFD5]">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
+                    ANALYSIS
+                  </span>
+                  <div>
+                    <span className="text-gray-500">Registered area: </span>
+                    <span className="font-semibold text-gray-800">
+                      {dossier?.legal_registry.recorded_legal_area_sqm != null
+                        ? `${dossier.legal_registry.recorded_legal_area_sqm} m²`
+                        : 'Verification required'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Survey area: </span>
+                    <span className="font-mono font-bold text-gray-800">
+                      {dossier?.spatial.actual_survey_area_sqm ?? selectedParcel.properties.area_sq_mtr} m²
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Difference: </span>
+                    <span className="font-mono font-bold">
+                      {dossier?.variance_analysis.absolute_discrepancy_pct != null
+                        ? `${dossier.variance_analysis.absolute_discrepancy_pct.toFixed(2)}% (${dossier.variance_analysis.signed_area_change_sqm != null && dossier.variance_analysis.signed_area_change_sqm > 0 ? '+' : ''}${dossier.variance_analysis.signed_area_change_sqm ?? ''} m²)`
+                        : 'Verification required'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Road overlap: </span>
+                    {(() => {
+                      const conflict = conflicts.find(
+                        (c) => c.properties.encroaching_parcel_id === selectedParcel.id || c.properties.survey_plot_no === selectedParcel.properties.survey_plot_no
+                      );
+                      if (conflict) {
+                        return (
+                          <span className="font-bold text-red-600">
+                            {conflict.properties.overlap_area_sqm} m² (Requires Review)
+                          </span>
+                        );
+                      }
+                      return <span className="text-emerald-700 font-medium">None detected (0 m²)</span>;
+                    })()}
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Review status: </span>
+                    <span className={`font-bold ${
+                      dossier?.variance_analysis.exceeds_threshold || conflicts.some((c) => c.properties.encroaching_parcel_id === selectedParcel.id)
+                        ? 'text-red-700'
+                        : dossier?.legal_registry.recorded_legal_area_sqm == null
+                        ? 'text-amber-700'
+                        : 'text-emerald-700'
+                    }`}>
+                      {dossier?.variance_analysis.exceeds_threshold || conflicts.some((c) => c.properties.encroaching_parcel_id === selectedParcel.id)
+                        ? 'Flagged for Officer Review'
+                        : dossier?.legal_registry.recorded_legal_area_sqm == null
+                        ? 'Verification required'
+                        : 'Tolerance Acceptable (<= 5.0%)'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Parcel Cards List */}
           <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">

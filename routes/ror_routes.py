@@ -31,35 +31,17 @@ def load_raw_features() -> List[Dict[str, Any]]:
     return survey_source_service.get_active_parcels()
 
 
-def ensure_reconciled_cache():
-    """Ensure RoR dossiers are derived and cached."""
+def ensure_reconciled_cache(force: bool = False):
+    """Ensure RoR dossiers are derived fresh from currently active survey features."""
     global _reconciled_cache
-    if _reconciled_cache:
+    if _reconciled_cache and not force:
         return
 
-    # Check if disk cache exists
-    if os.path.exists(DATA_ROR_CACHE):
-        try:
-            with open(DATA_ROR_CACHE, "r", encoding="utf-8") as f:
-                records = json.load(f)
-                for r in records:
-                    _reconciled_cache[r["parcel_id"]] = r
-                return
-        except Exception:
-            pass
-
-    # Derive fresh records
+    _reconciled_cache.clear()
     features = load_raw_features()
     derived = derive_all_village_rors(features)
     for r in derived:
         _reconciled_cache[r["parcel_id"]] = r
-
-    # Persist cache
-    try:
-        with open(DATA_ROR_CACHE, "w", encoding="utf-8") as f:
-            json.dump(derived, f, indent=2)
-    except Exception:
-        pass
 
 
 class DeriveRoRRequest(BaseModel):
