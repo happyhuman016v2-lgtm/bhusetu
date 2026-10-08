@@ -14,17 +14,18 @@ export interface Violation {
 }
 
 export interface Encumbrance {
-  id: string;
+  id?: string;
   date: string;
-  bankOrCourt: string;
-  type: 'Bank Mortgage' | 'Civil Partition Suit' | 'Court Injunction' | 'Nil';
+  bankOrCourt?: string;
+  type: string;
   amountRupees?: number;
-  status: 'Active' | 'Resolved';
+  details?: string;
+  status: string;
 }
 
 export interface NearestRevenueOffice {
   officeName: string;
-  officeType: 'Sub-Registrar Office (Registration Dept)' | 'Tahsildar / Taluk Revenue Office' | 'Village Administrative Office (VAO)';
+  officeType: string;
   jurisdiction: string;
   distanceKm: number;
   address: string;
@@ -77,18 +78,18 @@ export interface Parcel {
   owner: {
     name: string;
     fatherOrHusbandName?: string;
-    type: 'Individual' | 'Joint / Co-owners' | 'Government' | 'Ancestral Estate';
+    type: string;
     jointOwners?: string[];
   };
   area: {
     rorSqm: number;
     gisSqm: number;
-    regionalUnit: 'Acre' | 'Cent' | 'Guntha' | 'Bigha' | 'Sq. Yard';
+    regionalUnit: string;
     regionalValue: string;
   };
-  landUse: 'Agricultural' | 'Residential' | 'Commercial' | 'Buffer Reserve';
+  landUse: string;
   tax: {
-    status: 'Paid' | 'Pending' | 'Overdue';
+    status: string;
     lastPaidDate: string;
     annualDemandRupees: number;
     receiptNumber?: string;

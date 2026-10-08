@@ -38,15 +38,23 @@ export const CitizenPortal: React.FC<Props> = ({
   const [copiedULPIN, setCopiedULPIN] = useState(false);
   const [showPropertyCardModal, setShowPropertyCardModal] = useState(false);
 
-  // Search filter
-  const filteredParcels = parcels.filter(
-    (p) =>
-      p.ulpin.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.surveyNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.village.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.owner.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.coOwners && p.coOwners.some((co) => co.name.toLowerCase().includes(searchQuery.toLowerCase())))
-  );
+  // Status filter state
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'CLEAN' | 'WARNING' | 'CRITICAL'>('ALL');
+
+  // Search and status filter
+  const filteredParcels = parcels.filter((p) => {
+    const matchesStatus = statusFilter === 'ALL' || p.status === statusFilter;
+    const q = searchQuery.toLowerCase().trim();
+    const matchesQuery =
+      !q ||
+      p.ulpin.toLowerCase().includes(q) ||
+      p.surveyNumber.toLowerCase().includes(q) ||
+      p.village.toLowerCase().includes(q) ||
+      p.district.toLowerCase().includes(q) ||
+      p.owner.name.toLowerCase().includes(q) ||
+      (p.coOwners && p.coOwners.some((co) => co.name.toLowerCase().includes(q)));
+    return matchesStatus && matchesQuery;
+  });
 
   const handleCopyULPIN = () => {
     navigator.clipboard.writeText(selectedParcel.ulpin);
@@ -72,11 +80,11 @@ export const CitizenPortal: React.FC<Props> = ({
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'CLEAN':
-        return <CheckCircle className="w-4 h-4 text-[#276728]" />;
+        return <CheckCircle className="w-3.5 h-3.5 text-[#276728]" />;
       case 'WARNING':
-        return <AlertTriangle className="w-4 h-4 text-[#D97706]" />;
+        return <AlertTriangle className="w-3.5 h-3.5 text-[#D97706]" />;
       case 'CRITICAL':
-        return <XCircle className="w-4 h-4 text-[#B91C1C]" />;
+        return <XCircle className="w-3.5 h-3.5 text-[#B91C1C]" />;
       default:
         return null;
     }
@@ -85,21 +93,65 @@ export const CitizenPortal: React.FC<Props> = ({
   return (
     <div className="space-y-4">
       {/* Search & Quick Selector */}
-      <div className="bg-white border border-[#E7DFD5] rounded-xl p-3 shadow-xs">
-        <div className="relative mb-2.5">
+      <div className="bg-white border border-[#E7DFD5] rounded-xl p-3 shadow-xs space-y-2.5">
+        <div className="relative">
           <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search Bhu-Aadhaar ULPIN, Survey No, Village, or Co-owner..."
+            placeholder="Search 36 TRACGIS parcels by Survey No, Village, ULPIN..."
             className="w-full pl-9 pr-3 py-2 bg-[#FAF7F2] border border-[#E7DFD5] rounded-lg text-xs text-[#23201F] focus:outline-none focus:border-[#C85A32]"
           />
         </div>
 
-        {/* Quick Demo Parcel Buttons */}
-        <div className="flex flex-wrap gap-1.5">
-          {parcels.map((p) => {
+        {/* Status Filter Chips */}
+        <div className="flex items-center gap-1.5 text-[11px] pb-1 overflow-x-auto">
+          <button
+            onClick={() => setStatusFilter('ALL')}
+            className={`px-2 py-0.5 rounded-full font-semibold transition-colors shrink-0 ${
+              statusFilter === 'ALL'
+                ? 'bg-[#23201F] text-white'
+                : 'bg-[#FAF7F2] text-[#383432] hover:bg-[#E7DFD5] border border-[#E7DFD5]'
+            }`}
+          >
+            All ({parcels.length})
+          </button>
+          <button
+            onClick={() => setStatusFilter('CLEAN')}
+            className={`px-2 py-0.5 rounded-full font-semibold transition-colors shrink-0 ${
+              statusFilter === 'CLEAN'
+                ? 'bg-[#276728] text-white'
+                : 'bg-[#276728]/10 text-[#276728] hover:bg-[#276728]/20 border border-[#276728]/30'
+            }`}
+          >
+            Clean ({parcels.filter((p) => p.status === 'CLEAN').length})
+          </button>
+          <button
+            onClick={() => setStatusFilter('WARNING')}
+            className={`px-2 py-0.5 rounded-full font-semibold transition-colors shrink-0 ${
+              statusFilter === 'WARNING'
+                ? 'bg-[#D97706] text-white'
+                : 'bg-[#D97706]/10 text-[#D97706] hover:bg-[#D97706]/20 border border-[#D97706]/30'
+            }`}
+          >
+            Mismatch ({parcels.filter((p) => p.status === 'WARNING').length})
+          </button>
+          <button
+            onClick={() => setStatusFilter('CRITICAL')}
+            className={`px-2 py-0.5 rounded-full font-semibold transition-colors shrink-0 ${
+              statusFilter === 'CRITICAL'
+                ? 'bg-[#B91C1C] text-white'
+                : 'bg-[#B91C1C]/10 text-[#B91C1C] hover:bg-[#B91C1C]/20 border border-[#B91C1C]/30'
+            }`}
+          >
+            Encroachment ({parcels.filter((p) => p.status === 'CRITICAL').length})
+          </button>
+        </div>
+
+        {/* Scrollable Parcels Grid */}
+        <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+          {filteredParcels.map((p) => {
             const isSelected = p.id === selectedParcel.id;
             return (
               <button
@@ -112,7 +164,7 @@ export const CitizenPortal: React.FC<Props> = ({
                 }`}
               >
                 {getStatusIcon(p.status)}
-                <span className="truncate max-w-[120px]">{p.surveyNumber}</span>
+                <span className="truncate max-w-[130px]">{p.surveyNumber}</span>
                 <span className={`text-[9px] px-1 py-0.2 rounded font-bold ${getGradeBadge(p.trustGrade)}`}>
                   {p.trustGrade}
                 </span>

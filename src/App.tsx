@@ -23,7 +23,7 @@ export const App: React.FC = () => {
     });
   });
 
-  const [selectedParcelId, setSelectedParcelId] = useState<string>('parcel-kpr-01');
+  const [selectedParcelId, setSelectedParcelId] = useState<string>('parcel-1');
   const [activeRole, setActiveRole] = useState<Role>('citizen');
   const [activePartition, setActivePartition] = useState<PartitionResult | undefined>();
   const [pendingPartitions, setPendingPartitions] = useState<PartitionResult[]>([]);
