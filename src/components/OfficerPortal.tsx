@@ -128,8 +128,8 @@ export const OfficerPortal: React.FC<Props> = ({
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  // Tabs: 'triage' | 'proposals' | 'ocr' | 'offline' | 'ledger' | 'gis'
-  const [activeTab, setActiveTab] = useState<'triage' | 'proposals' | 'ocr' | 'offline' | 'ledger' | 'gis'>('triage');
+  // Tabs: 'triage' | 'ocr' | 'offline' | 'ledger' | 'gis'
+  const [activeTab, setActiveTab] = useState<'triage' | 'ocr' | 'offline' | 'ledger' | 'gis'>('triage');
 
   // GIS & Survey Ingestion State
   const [sourceMeta, setSourceMeta] = useState<SurveySourceMetadata | null>(null);
@@ -768,18 +768,6 @@ export const OfficerPortal: React.FC<Props> = ({
         </button>
 
         <button
-          onClick={() => setActiveTab('proposals')}
-          className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all flex items-center justify-center gap-1 ${
-            activeTab === 'proposals'
-              ? 'bg-[#23201F] text-white shadow-xs'
-              : 'hover:bg-white/40 text-[#C85A32]'
-          }`}
-        >
-          <Move className="w-3.5 h-3.5" />
-          <span>Propose Boundary</span>
-        </button>
-
-        <button
           onClick={() => setActiveTab('ocr')}
           className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all flex items-center justify-center gap-1 ${
             activeTab === 'ocr'
@@ -942,117 +930,7 @@ export const OfficerPortal: React.FC<Props> = ({
         </div>
       )}
 
-      {/* ===================== TAB 2: INTERACTIVE BOUNDARY PROPOSALS ===================== */}
-      {activeTab === 'proposals' && (
-        <div className="space-y-4 animate-in fade-in duration-150">
-          {!showProposalEditor ? (
-            <div className="space-y-4">
-              <div className="bg-white p-5 rounded-3xl border border-[#E7DFD5] shadow-xs space-y-3">
-                <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2 bg-[#C85A32]/10 rounded-xl text-[#C85A32]">
-                      <Move className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-sm text-[#23201F]">
-                        Interactive Boundary Proposal Workspace
-                      </h3>
-                      <p className="text-xs text-gray-500">
-                        Propose boundary edits with metric symmetric difference calculation
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-[#FAF7F2] p-3.5 rounded-2xl border border-[#E7DFD5] space-y-2 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Target Parcel:</span>
-                    <span className="font-bold text-[#23201F]">{selectedParcel.surveyNumber} ({selectedParcel.id})</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">ULPIN:</span>
-                    <span className="font-mono font-bold text-[#C85A32]">{selectedParcel.ulpin}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Registered Owner:</span>
-                    <span className="font-semibold">{selectedParcel.owner.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Stored Area:</span>
-                    <span className="font-mono font-bold text-emerald-800">{selectedParcel.area.gisSqm} m²</span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setShowProposalEditor(true)}
-                  className="w-full py-2.5 px-4 bg-[#C85A32] hover:bg-[#a64420] text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 shadow-xs transition-colors"
-                >
-                  <Move className="w-4 h-4" />
-                  <span>Launch Interactive Boundary Editor</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Saved Proposals Registry */}
-              <div className="bg-white p-4 rounded-3xl border border-[#E7DFD5] shadow-xs space-y-3">
-                <div className="flex items-center justify-between border-b border-gray-100 pb-2">
-                  <span className="font-bold text-xs text-[#23201F] uppercase tracking-wider">
-                    Submitted Review Proposals ({proposalsList.length})
-                  </span>
-                  <span className="text-[10px] text-gray-500 font-mono">
-                    Legal Parcels Unmutated
-                  </span>
-                </div>
-
-                {proposalsList.length === 0 ? (
-                  <div className="text-center py-6 text-xs text-gray-500">
-                    No boundary proposals submitted yet. Click above to create one.
-                  </div>
-                ) : (
-                  <div className="space-y-2.5 max-h-64 overflow-y-auto">
-                    {proposalsList.map((p) => (
-                      <div
-                        key={p.proposal_id}
-                        className="bg-[#FAF7F2] p-3 rounded-2xl border border-[#E7DFD5] text-xs space-y-1.5"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold font-mono text-[#C85A32]">{p.proposal_id}</span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold">
-                            {p.status}
-                          </span>
-                        </div>
-                        <p className="text-[#23201F] text-xs">{p.reason}</p>
-                        <div className="grid grid-cols-2 gap-2 text-[10px] text-gray-600 font-mono pt-1 border-t border-gray-200">
-                          <div>
-                            <span>Proposed Area: </span>
-                            <strong>{p.metrics.proposed_area_sqm} m²</strong> ({p.metrics.area_change_pct}%)
-                          </div>
-                          <div>
-                            <span>Symmetric Diff: </span>
-                            <strong className="text-purple-800">{p.metrics.symmetric_difference_area_sqm} m²</strong>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <BoundaryProposalEditor
-              parcelId={selectedParcel.id}
-              ulpin={selectedParcel.ulpin}
-              originalGeometry={selectedParcel.geometry}
-              onClose={() => setShowProposalEditor(false)}
-              onProposalSaved={(p) => {
-                setProposalsList([p, ...proposalsList]);
-              }}
-            />
-          )}
-        </div>
-      )}
-
-      {/* ===================== TAB 3: ROR OCR & DUPLICATE CHECKS ===================== */}
+      {/* ===================== TAB 2: ROR OCR & DUPLICATE CHECKS ===================== */}
       {activeTab === 'ocr' && (
         <div className="space-y-4 animate-in fade-in duration-150">
           {/* File Upload Box */}
