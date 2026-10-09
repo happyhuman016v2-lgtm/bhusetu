@@ -45,7 +45,7 @@ export interface OCRUploadResponse {
   has_preprocessed_preview: boolean;
 }
 
-const API_BASE = '/api';
+import { API_BASE } from './apiConfig';
 
 export async function uploadRoRDocument(file: File): Promise<OCRUploadResponse> {
   const formData = new FormData();

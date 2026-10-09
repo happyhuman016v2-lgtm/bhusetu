@@ -61,7 +61,7 @@ export interface DemoShiftedFixture {
   verification_status: string;
 }
 
-const API_BASE = '/api';
+import { API_BASE } from './apiConfig';
 
 export async function calculateProposalDiff(params: {
   parcel_id: string;

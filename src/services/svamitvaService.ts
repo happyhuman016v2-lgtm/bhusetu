@@ -1,7 +1,7 @@
 import * as turf from '@turf/turf';
 import { SvamitvaParcel, EncroachmentAnalysisResult } from '../types';
 
-const API_BASE = '/api';
+import { API_BASE } from './apiConfig';
 
 /**
  * Fetch all SVAMITVA drone survey parcels from backend

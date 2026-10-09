@@ -19,7 +19,7 @@ export interface LoginResponse {
   user: AuthUser;
 }
 
-const API_BASE = '/api';
+import { API_BASE } from './apiConfig';
 
 export function getAuthToken(): string | null {
   return localStorage.getItem('bhusetu_access_token');

@@ -56,7 +56,7 @@ export interface DemoTamperTestResult {
   }>;
 }
 
-const API_BASE = '/api';
+import { API_BASE } from './apiConfig';
 
 export async function createSignedEvidenceReport(params: {
   parcel_id: string;

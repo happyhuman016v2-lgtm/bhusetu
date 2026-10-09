@@ -35,7 +35,7 @@ export class BhuSetuOfflineDatabase extends Dexie {
 
 export const offlineDb = new BhuSetuOfflineDatabase();
 
-const API_BASE = '/api';
+import { API_BASE } from './apiConfig';
 
 /**
  * Save draft strictly locally in IndexedDB
