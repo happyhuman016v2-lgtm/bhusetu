@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Parcel, PartitionResult, OfficerAuditEntry } from '../types';
-import { divideParcelEquitably } from '../services/partitionEngine';
+import { divideParcelEquitably, generatePartitionDeedMemorandum } from '../services/partitionEngine';
 import {
   AuthUser,
   loginUser,
@@ -13,6 +13,7 @@ import {
   fetchLedgerBlocks,
   verifyLedgerIntegrity,
   issueDroneResurveyOrder,
+  recordPartitionMutationOrder,
 } from '../services/ledgerApi';
 import {
   uploadRoRDocument,
@@ -166,13 +167,19 @@ export const OfficerPortal: React.FC<Props> = ({
   // Signed Evidence Modal State
   const [showSignedEvidenceModal, setShowSignedEvidenceModal] = useState<boolean>(false);
 
-  // Statutory Land Partition State
+  // 2-Party Statutory Land Partition & Sub-ULPIN State
+  const [showSplitModal, setShowSplitModal] = useState<boolean>(false);
   const [officerDivisionMode, setOfficerDivisionMode] = useState<'EQUAL' | 'CUSTOM'>('EQUAL');
-  const [officerShareholders, setOfficerShareholders] = useState([
-    { id: 'off-p-1', name: 'Party 1 (Shareholder A)', sharePercent: 50 },
-    { id: 'off-p-2', name: 'Party 2 (Shareholder B)', sharePercent: 50 },
-  ]);
+  const [party1Name, setParty1Name] = useState<string>(
+    selectedParcel.owner.name || 'Party 1 (Legal Heir A)'
+  );
+  const [party2Name, setParty2Name] = useState<string>(
+    selectedParcel.coOwners?.[1]?.name || selectedParcel.coOwners?.[0]?.name || 'Party 2 (Legal Heir B)'
+  );
+  const [party1SharePercent, setParty1SharePercent] = useState<number>(50);
   const [computedOfficerPartition, setComputedOfficerPartition] = useState<PartitionResult | null>(null);
+  const [isApplyingPartition, setIsApplyingPartition] = useState<boolean>(false);
+  const [partitionSuccessMsg, setPartitionSuccessMsg] = useState<string | null>(null);
 
   // Encroachment Notice Modal
   const [selectedNoticeParcel, setSelectedNoticeParcel] = useState<Parcel | null>(null);
@@ -205,6 +212,16 @@ export const OfficerPortal: React.FC<Props> = ({
       setOrderParcelId(selectedParcel.id);
       setOrderULPIN(selectedParcel.ulpin || `UP1428SNMPGN${selectedParcel.id.slice(-3).toUpperCase()}`);
       setOrderReason(computeParcelDiscrepancyReason(selectedParcel));
+      setParty1Name(selectedParcel.owner.name || 'Party 1 (Legal Heir A)');
+      setParty2Name(
+        selectedParcel.coOwners?.[1]?.name ||
+        selectedParcel.coOwners?.[0]?.name ||
+        'Party 2 (Legal Heir B)'
+      );
+      setParty1SharePercent(50);
+      setOfficerDivisionMode('EQUAL');
+      setComputedOfficerPartition(null);
+      setPartitionSuccessMsg(null);
     }
   }, [selectedParcel]);
 
@@ -233,22 +250,86 @@ export const OfficerPortal: React.FC<Props> = ({
     setCurrentUser(null);
   };
 
-  const handleOfficerComputePartition = () => {
-    const count = officerShareholders.length;
-    let shares = [...officerShareholders];
-    if (officerDivisionMode === 'EQUAL') {
-      const eq = Math.round((100 / count) * 10) / 10;
-      shares = shares.map((s, i) => ({
-        ...s,
-        sharePercent: i === count - 1 ? 100 - eq * (count - 1) : eq,
-      }));
-      setOfficerShareholders(shares);
+  const handleComputeTwoPersonPartition = (
+    mode: 'EQUAL' | 'CUSTOM' = officerDivisionMode,
+    p1Share: number = party1SharePercent,
+    name1: string = party1Name,
+    name2: string = party2Name
+  ): PartitionResult | null => {
+    const fraction1 = mode === 'EQUAL' ? 0.5 : p1Share / 100;
+    const fraction2 = 1.0 - fraction1;
+
+    try {
+      const result = divideParcelEquitably(selectedParcel, [
+        { id: 'party-1', name: name1.trim() || 'Party 1', shareFraction: fraction1 },
+        { id: 'party-2', name: name2.trim() || 'Party 2', shareFraction: fraction2 },
+      ]);
+      setComputedOfficerPartition(result);
+      return result;
+    } catch (err: any) {
+      console.warn('Partition computation error:', err);
+      return null;
     }
-    const result = divideParcelEquitably(
-      selectedParcel,
-      shares.map((s) => ({ id: s.id, name: s.name, shareFraction: s.sharePercent / 100 }))
-    );
-    setComputedOfficerPartition(result);
+  };
+
+  const handlePreviewPartitionOnMap = () => {
+    const partition = computedOfficerPartition || handleComputeTwoPersonPartition();
+    if (partition) {
+      onApprovePartition(partition);
+    }
+  };
+
+  const handleApproveAndSealPartition = async () => {
+    const partition = computedOfficerPartition || handleComputeTwoPersonPartition();
+    if (!partition) return;
+
+    setIsApplyingPartition(true);
+    try {
+      const split1 = partition.splits[0];
+      const split2 = partition.splits[1];
+      const subUlpin1 = split1.subUlpin || `${selectedParcel.ulpin}-A`;
+      const subUlpin2 = split2.subUlpin || `${selectedParcel.ulpin}-B`;
+
+      // 1. Update map
+      onApprovePartition(partition);
+
+      // 2. Audit log entry
+      onAddAuditLog({
+        officerName: currentUser?.full_name || selectedParcel.nearestOffice.officerName,
+        designation: currentUser?.designation || selectedParcel.nearestOffice.designation,
+        action: 'PARTITION_MUTATION_APPROVED',
+        parcelId: partition.parcelId,
+        surveyNumber: selectedParcel.surveyNumber,
+        details: `Equitable 2-party civil land partition approved for Plot ${selectedParcel.surveyNumber}. Generated 2 Sub-ULPINs: [1] ${subUlpin1} (${split1.shareholderName}, ${split1.areaSqm}m²) & [2] ${subUlpin2} (${split2.shareholderName}, ${split2.areaSqm}m²). Area parity: ${partition.parityScore}%.`,
+      });
+
+      // 3. Cryptographically seal in immutable blockchain ledger
+      await recordPartitionMutationOrder({
+        parcel_id: selectedParcel.id,
+        parent_ulpin: selectedParcel.ulpin,
+        sub_ulpin_1: subUlpin1,
+        sub_ulpin_2: subUlpin2,
+        party_1_name: split1.shareholderName,
+        party_2_name: split2.shareholderName,
+        party_1_share: split1.sharePercentage,
+        party_2_share: split2.sharePercentage,
+        party_1_area_sqm: split1.areaSqm,
+        party_2_area_sqm: split2.areaSqm,
+        parity_score: partition.parityScore,
+      });
+
+      // 4. Refresh ledger blocks
+      const updatedBlocks = await fetchLedgerBlocks();
+      setLedgerBlocks(updatedBlocks);
+
+      setPartitionSuccessMsg(
+        `Land partition sealed! Created 2 Sub-ULPINs: ${subUlpin1} and ${subUlpin2}. Cryptographically recorded in Immutable Ledger.`
+      );
+    } catch (err: any) {
+      console.error('Failed to seal partition:', err);
+    } finally {
+      setIsApplyingPartition(false);
+    }
   };
 
   const handleIssueNotice = (parcel: Parcel) => {
@@ -261,18 +342,6 @@ export const OfficerPortal: React.FC<Props> = ({
       details: `Form VII Statutory Notice issued for ${parcel.violations[0]?.encroachmentAreaSqm || 'buffer'} m² encroachment into ${parcel.bufferZone?.name || 'public buffer'}.`,
     });
     setSelectedNoticeParcel(parcel);
-  };
-
-  const handleApproveSubdivision = (partition: PartitionResult) => {
-    onApprovePartition(partition);
-    onAddAuditLog({
-      officerName: currentUser?.full_name || selectedParcel.nearestOffice.officerName,
-      designation: currentUser?.designation || selectedParcel.nearestOffice.designation,
-      action: 'PARTITION_MUTATION_APPROVED',
-      parcelId: partition.parcelId,
-      surveyNumber: selectedParcel.surveyNumber,
-      details: `Equitable land partition approved into ${partition.splits.length} sub-parcels with ${partition.parityScore}% area parity. Sub-ULPINs assigned.`,
-    });
   };
 
   // OCR Upload Handler
@@ -586,6 +655,18 @@ export const OfficerPortal: React.FC<Props> = ({
 
             <div className="flex items-center gap-2">
               <button
+                onClick={() => {
+                  setShowSplitModal(true);
+                  setPartitionSuccessMsg(null);
+                  handleComputeTwoPersonPartition(officerDivisionMode, party1SharePercent, party1Name, party2Name);
+                }}
+                className="px-3 py-1.5 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs"
+                title="Electively split this plot between 2 persons, creating 2 Sub-ULPINs"
+              >
+                <Scale className="w-3.5 h-3.5 text-blue-200" />
+                <span>Split Plot (2 Sub-ULPINs)</span>
+              </button>
+              <button
                 onClick={() => setShowSignedEvidenceModal(true)}
                 className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs"
               >
@@ -605,6 +686,39 @@ export const OfficerPortal: React.FC<Props> = ({
                 <span>Issue Resurvey Order</span>
               </button>
             </div>
+          </div>
+
+          {/* Statutory 2-Party Land Partition Choice Card */}
+          <div className="bg-white border border-[#E7DFD5] rounded-xl p-3.5 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#2563EB] border border-blue-200 flex items-center justify-center font-bold shrink-0">
+                <Scale className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-[#23201F]">
+                    Civil Land Partition Choice • 2 Sub-ULPINs
+                  </h4>
+                  <span className="text-[10px] bg-blue-100 text-[#2563EB] font-bold px-1.5 py-0.2 rounded">
+                    Optional Action
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#6B6360] mt-0.5">
+                  Electively split Plot #{selectedParcel.surveyNumber} ({selectedParcel.ulpin}) between 2 legal heirs/co-owners into sub-holdings <strong>{selectedParcel.ulpin}-A</strong> and <strong>{selectedParcel.ulpin}-B</strong>.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setShowSplitModal(true);
+                setPartitionSuccessMsg(null);
+                handleComputeTwoPersonPartition(officerDivisionMode, party1SharePercent, party1Name, party2Name);
+              }}
+              className="px-3.5 py-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs shrink-0"
+            >
+              <span>Initiate 2-Party Split</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
           </div>
 
           {/* Critical Buffer Encroachment Enforcement Queue */}
@@ -1168,6 +1282,344 @@ export const OfficerPortal: React.FC<Props> = ({
         legalAreaSqm={selectedParcel.area.rorSqm}
         variancePct={Math.round(((selectedParcel.area.gisSqm - selectedParcel.area.rorSqm) / selectedParcel.area.rorSqm) * 1000) / 10}
       />
+
+      {/* 2-PARTY CIVIL LAND PARTITION MODAL (GENERATING 2 SUB-ULPINS) */}
+      {showSplitModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-gray-200 space-y-4 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-[#E7DFD5] pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-100 text-[#2563EB] flex items-center justify-center font-bold">
+                  <Scale className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-[#23201F] flex items-center gap-2">
+                    <span>Civil Land Partition • 2-Party Sub-Division</span>
+                    <span className="text-[10px] bg-blue-100 text-[#2563EB] px-2 py-0.5 rounded-full font-bold">
+                      Section 131 LRC
+                    </span>
+                  </h3>
+                  <p className="text-xs text-[#6B6360]">
+                    Sub-divide Plot #{selectedParcel.surveyNumber} into 2 independent sub-holdings with distinct Bhu-Aadhaar Sub-ULPINs
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowSplitModal(false)}
+                className="text-gray-400 hover:text-gray-600 text-sm font-bold p-1 rounded-lg hover:bg-gray-100"
+              >
+                ✕
+              </button>
+            </div>
+
+            {partitionSuccessMsg ? (
+              <div className="space-y-4">
+                <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-300 text-emerald-900 text-xs space-y-2">
+                  <p className="font-bold flex items-center gap-1.5 text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    <span>2 Sub-ULPINs Cryptographically Created & Sealed</span>
+                  </p>
+                  <p className="text-xs leading-relaxed">{partitionSuccessMsg}</p>
+                  
+                  {computedOfficerPartition && (
+                    <div className="grid grid-cols-2 gap-2.5 pt-2">
+                      {computedOfficerPartition.splits.map((s, idx) => (
+                        <div key={idx} className="bg-white p-3 rounded-xl border border-emerald-200 space-y-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">
+                            Sub-Parcel {String.fromCharCode(65 + idx)}
+                          </span>
+                          <p className="font-mono font-bold text-xs text-[#23201F]">
+                            {s.subUlpin || `${selectedParcel.ulpin}-${String.fromCharCode(65 + idx)}`}
+                          </p>
+                          <p className="text-[11px] text-[#6B6360]">
+                            Allotted: <strong>{s.shareholderName}</strong>
+                          </p>
+                          <p className="text-[11px] font-semibold text-emerald-800">
+                            {s.areaSqm} m² ({s.sharePercentage}%)
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (computedOfficerPartition) {
+                        const deed = generatePartitionDeedMemorandum(selectedParcel, computedOfficerPartition);
+                        const blob = new Blob([deed], { type: 'text/plain' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `Partition_Deed_${selectedParcel.surveyNumber}.txt`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }
+                    }}
+                    className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-[#23201F] text-xs font-bold transition-colors flex items-center gap-1.5"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-[#23201F]" />
+                    <span>Download Statutory Deed (.txt)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowSplitModal(false)}
+                    className="px-4 py-2 rounded-xl bg-[#23201F] hover:bg-black text-white text-xs font-bold transition-colors"
+                  >
+                    Done & Close
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 text-xs">
+                {/* Parent Parcel Provenance Summary */}
+                <div className="bg-[#FAF7F2] p-3 rounded-xl border border-[#E7DFD5] grid grid-cols-3 gap-2 text-[11px]">
+                  <div>
+                    <span className="text-gray-500">Parent Survey:</span>{' '}
+                    <strong className="text-[#23201F]">{selectedParcel.surveyNumber}</strong>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Parent ULPIN:</span>{' '}
+                    <strong className="text-[#23201F] font-mono">{selectedParcel.ulpin}</strong>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Total GIS Area:</span>{' '}
+                    <strong className="text-emerald-700">{selectedParcel.area.gisSqm} m²</strong>
+                  </div>
+                </div>
+
+                {/* Division Mode Choice Selector */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-[#23201F]">
+                    Choose Partition Methodology:
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOfficerDivisionMode('EQUAL');
+                        setParty1SharePercent(50);
+                        handleComputeTwoPersonPartition('EQUAL', 50, party1Name, party2Name);
+                      }}
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold text-center transition-all ${
+                        officerDivisionMode === 'EQUAL'
+                          ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-xs'
+                          : 'bg-[#FAF7F2] text-[#383432] border-[#E7DFD5] hover:bg-gray-100'
+                      }`}
+                    >
+                      ⚖️ Equal 50 : 50 Fair Split
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOfficerDivisionMode('CUSTOM');
+                        handleComputeTwoPersonPartition('CUSTOM', party1SharePercent, party1Name, party2Name);
+                      }}
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold text-center transition-all ${
+                        officerDivisionMode === 'CUSTOM'
+                          ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-xs'
+                          : 'bg-[#FAF7F2] text-[#383432] border-[#E7DFD5] hover:bg-gray-100'
+                      }`}
+                    >
+                      📐 Custom Proportional Split
+                    </button>
+                  </div>
+                </div>
+
+                {/* Custom Split Ratio Slider (when mode === 'CUSTOM') */}
+                {officerDivisionMode === 'CUSTOM' && (
+                  <div className="bg-[#FAF7F2] p-3 rounded-xl border border-[#E7DFD5] space-y-1.5">
+                    <div className="flex items-center justify-between font-bold text-xs">
+                      <span className="text-[#2563EB]">{party1Name || 'Party 1'}: {party1SharePercent}%</span>
+                      <span className="text-emerald-700">{party2Name || 'Party 2'}: {100 - party1SharePercent}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="10"
+                      max="90"
+                      step="5"
+                      value={party1SharePercent}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        setParty1SharePercent(val);
+                        handleComputeTwoPersonPartition('CUSTOM', val, party1Name, party2Name);
+                      }}
+                      className="w-full accent-[#2563EB] cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-gray-500 font-mono">
+                      <span>10% (Minimal share)</span>
+                      <span>50% (Equal)</span>
+                      <span>90% (Majority share)</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Two Parties / Legal Heirs Details */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Party 1 Card */}
+                  <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#2563EB]">
+                        Allottee 1 (Sub-Holding A)
+                      </span>
+                      <span className="text-xs font-bold text-[#2563EB]">
+                        {officerDivisionMode === 'EQUAL' ? 50 : party1SharePercent}% Share
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-gray-700 mb-1">
+                        Party 1 Full Name
+                      </label>
+                      <input
+                        type="text"
+                        value={party1Name}
+                        onChange={(e) => {
+                          setParty1Name(e.target.value);
+                          handleComputeTwoPersonPartition(officerDivisionMode, party1SharePercent, e.target.value, party2Name);
+                        }}
+                        className="w-full px-2.5 py-1.5 bg-white border border-blue-200 rounded-lg text-xs font-semibold text-[#23201F]"
+                        placeholder="Party 1 Name"
+                      />
+                    </div>
+
+                    <div className="pt-1 border-t border-blue-200 space-y-1 text-[11px]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-500">Assigned Sub-ULPIN:</span>
+                        <span className="font-mono font-bold text-[#2563EB] bg-white px-1.5 py-0.2 rounded border border-blue-200">
+                          {selectedParcel.ulpin}-A
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-500">Sub-Survey:</span>
+                        <strong className="text-[#23201F]">{selectedParcel.surveyNumber}/A</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Party 2 Card */}
+                  <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-2xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">
+                        Allottee 2 (Sub-Holding B)
+                      </span>
+                      <span className="text-xs font-bold text-emerald-800">
+                        {officerDivisionMode === 'EQUAL' ? 50 : 100 - party1SharePercent}% Share
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-gray-700 mb-1">
+                        Party 2 Full Name
+                      </label>
+                      <input
+                        type="text"
+                        value={party2Name}
+                        onChange={(e) => {
+                          setParty2Name(e.target.value);
+                          handleComputeTwoPersonPartition(officerDivisionMode, party1SharePercent, party1Name, e.target.value);
+                        }}
+                        className="w-full px-2.5 py-1.5 bg-white border border-emerald-200 rounded-lg text-xs font-semibold text-[#23201F]"
+                        placeholder="Party 2 Name"
+                      />
+                    </div>
+
+                    <div className="pt-1 border-t border-emerald-200 space-y-1 text-[11px]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-500">Assigned Sub-ULPIN:</span>
+                        <span className="font-mono font-bold text-emerald-800 bg-white px-1.5 py-0.2 rounded border border-emerald-200">
+                          {selectedParcel.ulpin}-B
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-500">Sub-Survey:</span>
+                        <strong className="text-[#23201F]">{selectedParcel.surveyNumber}/B</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Geodesic Calculation & Output Cards */}
+                {computedOfficerPartition && computedOfficerPartition.splits.length >= 2 && (
+                  <div className="space-y-2 pt-1 border-t border-[#E7DFD5]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-[#23201F] flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Calculated Spatial Slices (Geodesic Equal Area)</span>
+                      </span>
+                      <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                        {computedOfficerPartition.parityScore}% Parity Score
+                      </span>
+                    </div>
+
+                    {/* Proportional Preview Bar */}
+                    <div className="w-full h-3 rounded-full overflow-hidden flex bg-gray-200 shadow-inner">
+                      <div
+                        style={{ width: `${computedOfficerPartition.splits[0].sharePercentage}%` }}
+                        className="bg-[#2563EB] h-full"
+                        title={`${computedOfficerPartition.splits[0].shareholderName}: ${computedOfficerPartition.splits[0].sharePercentage}%`}
+                      />
+                      <div
+                        style={{ width: `${computedOfficerPartition.splits[1].sharePercentage}%` }}
+                        className="bg-[#16A34A] h-full"
+                        title={`${computedOfficerPartition.splits[1].shareholderName}: ${computedOfficerPartition.splits[1].sharePercentage}%`}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <div className="bg-[#FAF7F2] p-2.5 rounded-xl border border-[#E7DFD5] space-y-0.5">
+                        <p className="font-bold text-[#2563EB]">{computedOfficerPartition.splits[0].subUlpin}</p>
+                        <p className="text-gray-600">Area: <strong className="text-[#23201F]">{computedOfficerPartition.splits[0].areaSqm} m²</strong></p>
+                        <p className="text-gray-500 text-[10px]">Road Frontage: ~{computedOfficerPartition.splits[0].roadFrontageMetres}m</p>
+                      </div>
+                      <div className="bg-[#FAF7F2] p-2.5 rounded-xl border border-[#E7DFD5] space-y-0.5">
+                        <p className="font-bold text-emerald-800">{computedOfficerPartition.splits[1].subUlpin}</p>
+                        <p className="text-gray-600">Area: <strong className="text-[#23201F]">{computedOfficerPartition.splits[1].areaSqm} m²</strong></p>
+                        <p className="text-gray-500 text-[10px]">Road Frontage: ~{computedOfficerPartition.splits[1].roadFrontageMetres}m</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Modal Buttons */}
+                <div className="flex items-center justify-between pt-3 border-t border-[#E7DFD5]">
+                  <button
+                    type="button"
+                    onClick={handlePreviewPartitionOnMap}
+                    className="px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-[#23201F] text-xs font-bold transition-colors flex items-center gap-1.5"
+                    title="Render split geometries on the interactive map engine"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-[#2563EB]" />
+                    <span>Preview Slices on Map</span>
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowSplitModal(false)}
+                      className="px-3.5 py-2 rounded-xl border border-gray-300 font-semibold text-gray-700 hover:bg-gray-100 text-xs"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleApproveAndSealPartition}
+                      disabled={isApplyingPartition}
+                      className="px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                    >
+                      <Stamp className="w-3.5 h-3.5 text-blue-200" />
+                      <span>{isApplyingPartition ? 'Sealing in Ledger...' : 'Approve & Seal Sub-ULPINs'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
 
 

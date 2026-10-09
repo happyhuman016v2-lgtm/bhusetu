@@ -72,6 +72,7 @@ export function divideParcelEquitably(
     const isLast = i === normalizedShares.length - 1;
     const targetArea = totalArea * person.normalizedFraction;
     const subSurveyNo = `${parcel.surveyNumber}/${String.fromCharCode(65 + i)}`;
+    const subUlpin = `${parcel.ulpin}-${String.fromCharCode(65 + i)}`;
 
     if (isLast) {
       // Last shareholder gets the remaining polygon to guarantee exact topological conservation
@@ -86,6 +87,7 @@ export function divideParcelEquitably(
         color: SHAREHOLDER_PALETTE[i % SHAREHOLDER_PALETTE.length],
         roadFrontageMetres: Math.round(Math.sqrt(currentArea) * 0.9 * 10) / 10,
         subSurveyNo,
+        subUlpin,
       });
       break;
     }
@@ -163,6 +165,7 @@ export function divideParcelEquitably(
       color: SHAREHOLDER_PALETTE[i % SHAREHOLDER_PALETTE.length],
       roadFrontageMetres: Math.round(Math.sqrt(calculatedSliceArea) * 0.9 * 10) / 10,
       subSurveyNo,
+      subUlpin,
     });
   }
 
@@ -207,6 +210,7 @@ export function generatePartitionDeedMemorandum(parcel: Parcel, partition: Parti
   partition.splits.forEach((split, index) => {
     lines.push(
       `   [SHARE ${index + 1}] Sub-Division No: ${split.subSurveyNo}`,
+      `   - Sub-ULPIN       : ${split.subUlpin || `${parcel.ulpin}-${String.fromCharCode(65 + index)}`}`,
       `   - Allottee Name   : ${split.shareholderName}`,
       `   - Allocated Area  : ${split.areaSqm} m² (${split.regionalAreaFormatted})`,
       `   - Share Ratio     : ${split.sharePercentage}% of total parent holding`,

@@ -329,3 +329,64 @@ export async function issueDroneResurveyOrder(params: {
   localStorage.setItem('bhusetu_custom_blocks', JSON.stringify(customBlocks));
   return newBlock;
 }
+
+export async function recordPartitionMutationOrder(params: {
+  parcel_id: string;
+  parent_ulpin: string;
+  sub_ulpin_1: string;
+  sub_ulpin_2: string;
+  party_1_name: string;
+  party_2_name: string;
+  party_1_share: number;
+  party_2_share: number;
+  party_1_area_sqm: number;
+  party_2_area_sqm: number;
+  parity_score: number;
+}): Promise<LedgerBlock> {
+  const customBlocks = getStoredCustomBlocks();
+  const allCurrent = [...BASE_FALLBACK_BLOCKS, ...customBlocks];
+  const lastBlock = allCurrent[allCurrent.length - 1];
+  const newIndex = allCurrent.length;
+  const newOrderId = `mut-${Math.floor(1000 + Math.random() * 9000)}-2026`;
+  const nowIso = new Date().toISOString();
+  const user = getStoredUser();
+
+  const payload: LedgerBlockPayload = {
+    index: newIndex,
+    order_id: newOrderId,
+    timestamp: nowIso,
+    type: 'STATUTORY_PARTITION_MUTATION',
+    parcel_id: params.parcel_id,
+    ulpin: params.parent_ulpin,
+    sub_ulpin_1: params.sub_ulpin_1,
+    sub_ulpin_2: params.sub_ulpin_2,
+    officer_badge_id: user?.badge_id || 'REV-OFF-UP-042',
+    officer_name: user?.full_name || 'Thiru M. Shanmugavel, M.A.',
+    discrepancy_reason: `Equitable 2-party civil land partition. Sub-divided parent holding into 2 sub-parcels: [1] ${params.sub_ulpin_1} (${params.party_1_name}, ${params.party_1_area_sqm}m² - ${params.party_1_share}%) and [2] ${params.sub_ulpin_2} (${params.party_2_name}, ${params.party_2_area_sqm}m² - ${params.party_2_share}%). Equity parity: ${params.parity_score}%.`,
+    statutory_clause: 'Land Revenue Code Section 131 (Partition of Joint Agricultural Holdings)',
+    status: 'MUTATION_SEALED_APPROVED',
+  };
+
+  const canonicalPayload = JSON.stringify({
+    prev_hash: lastBlock.hash,
+    payload,
+  });
+  const blockHash = await computeSha256(canonicalPayload);
+
+  const newBlock: LedgerBlock = {
+    index: newIndex,
+    timestamp: nowIso,
+    order_id: newOrderId,
+    parcel_id: params.parcel_id,
+    ulpin: params.parent_ulpin,
+    officer_badge_id: payload.officer_badge_id,
+    prev_hash: lastBlock.hash,
+    hash: blockHash,
+    payload,
+  };
+
+  customBlocks.push(newBlock);
+  localStorage.setItem('bhusetu_custom_blocks', JSON.stringify(customBlocks));
+  return newBlock;
+}
+

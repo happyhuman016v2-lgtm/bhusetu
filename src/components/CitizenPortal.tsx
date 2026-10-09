@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Parcel, PartitionResult } from '../types';
 import { NearestOfficeCard } from './NearestOfficeCard';
-import { LandDivisionAssistant } from './LandDivisionAssistant';
 import { RoRDossierModal } from './RoRDossierModal';
 import { computeChauhaddiNeighbors } from '../services/gisEngine';
 import {
@@ -43,7 +42,6 @@ export const CitizenPortal: React.FC<Props> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedULPIN, setCopiedULPIN] = useState(false);
   const [showRoRDossierModal, setShowRoRDossierModal] = useState(false);
-  const [showCitizenPartition, setShowCitizenPartition] = useState(false);
 
   // Status filter state
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'CLEAN' | 'WARNING' | 'CRITICAL'>('ALL');
@@ -422,41 +420,7 @@ export const CitizenPortal: React.FC<Props> = ({
         />
       </div>
 
-      {/* 🌟 LAND PARTITION & FAIR DIVISION ASSISTANT (Only rendered when user explicitly clicks the button) */}
-      {showCitizenPartition ? (
-        <div className="space-y-2 border border-[#C85A32]/30 bg-[#FAF7F2] p-3 rounded-xl">
-          <div className="flex items-center justify-between pb-2 border-b border-[#E7DFD5]">
-            <span className="text-xs font-bold text-[#23201F] flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-[#C85A32]" />
-              <span>Interactive Land Partition & Fair Co-Owner Division</span>
-            </span>
-            <button
-              onClick={() => setShowCitizenPartition(false)}
-              className="text-xs text-[#6B6360] hover:text-[#B91C1C] font-semibold px-2 py-0.5 rounded border border-[#E7DFD5] bg-white hover:bg-red-50"
-            >
-              ✕ Close Division Assistant
-            </button>
-          </div>
-          <LandDivisionAssistant
-            parcel={selectedParcel}
-            activePartition={activePartition}
-            onPartitionChange={onPartitionChange}
-            onSubmitToOfficer={onSubmitToOfficer}
-          />
-        </div>
-      ) : (
-        <div className="bg-[#FAF7F2] border border-[#E7DFD5] rounded-xl p-3 text-center">
-          <p className="text-xs text-[#6B6360] mb-2">
-            Dividing this plot among family co-heirs or partners? Use the algorithmic fair division assistant.
-          </p>
-          <button
-            onClick={() => setShowCitizenPartition(true)}
-            className="px-3 py-1.5 rounded-lg bg-white border border-[#E7DFD5] hover:border-[#C85A32] text-[#C85A32] text-xs font-semibold shadow-2xs hover:bg-[#FAF7F2] transition-colors"
-          >
-            + Request Land Partition / Co-Owner Division
-          </button>
-        </div>
-      )}
+
 
       {/* Official RoR Land Title Dossier & Digital Property Card Modal */}
       <RoRDossierModal

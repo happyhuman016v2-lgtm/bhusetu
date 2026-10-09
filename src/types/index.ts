@@ -55,6 +55,7 @@ export interface SubParcelSplit {
   color: string;
   roadFrontageMetres: number;
   subSurveyNo: string;
+  subUlpin?: string;
 }
 
 export interface PartitionResult {
