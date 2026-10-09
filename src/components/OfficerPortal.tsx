@@ -22,13 +22,6 @@ import {
   fetchProposals,
   BoundaryProposalRecord,
 } from '../services/proposalApi';
-import {
-  saveLocalDraft,
-  getUserDrafts,
-  syncDraftToServer,
-  runDisconnectSyncTwiceTest,
-  OfflineEvidenceDraft,
-} from '../services/offlineDb';
 import { BoundaryProposalEditor } from './BoundaryProposalEditor';
 import { SignedEvidenceModal } from './SignedEvidenceModal';
 import {
@@ -175,8 +168,8 @@ export const OfficerPortal: React.FC<Props> = ({
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  // Tabs: 'triage' | 'ocr' | 'offline' | 'ledger' | 'gis'
-  const [activeTab, setActiveTab] = useState<'triage' | 'ocr' | 'offline' | 'ledger' | 'gis'>('triage');
+  // Tabs: 'triage' | 'ocr' | 'ledger' | 'gis'
+  const [activeTab, setActiveTab] = useState<'triage' | 'ocr' | 'ledger' | 'gis'>('triage');
 
   // GIS & Survey Ingestion State
   const [sourceMeta, setSourceMeta] = useState<SurveySourceMetadata | null>(null);
@@ -211,14 +204,6 @@ export const OfficerPortal: React.FC<Props> = ({
   // Boundary Proposal Editor State
   const [showProposalEditor, setShowProposalEditor] = useState<boolean>(false);
   const [proposalsList, setProposalsList] = useState<BoundaryProposalRecord[]>([]);
-
-  // Dexie.js Offline Evidence State
-  const [offlineDrafts, setOfflineDrafts] = useState<OfflineEvidenceDraft[]>([]);
-  const [offlineDraftNotes, setOfflineDraftNotes] = useState('Ground verification: Boundary stones confirmed intact along northern perimeter.');
-  const [isSyncingOffline, setIsSyncingOffline] = useState(false);
-  const [offlineSyncMessage, setOfflineSyncMessage] = useState<string | null>(null);
-  const [offlineTestResult, setOfflineTestResult] = useState<any | null>(null);
-  const [isRunningOfflineTest, setIsRunningOfflineTest] = useState(false);
 
   // Signed Evidence Modal State
   const [showSignedEvidenceModal, setShowSignedEvidenceModal] = useState<boolean>(false);
@@ -577,95 +562,7 @@ export const OfficerPortal: React.FC<Props> = ({
     }
   };
 
-  // Dexie.js Offline Evidence Handlers
-  const loadOfflineDrafts = async () => {
-    if (currentUser?.email) {
-      try {
-        const drafts = await getUserDrafts(currentUser.email);
-        setOfflineDrafts(drafts);
-      } catch (e) {
-        console.warn('Could not load drafts from IndexedDB', e);
-      }
-    }
-  };
 
-  useEffect(() => {
-    loadOfflineDrafts();
-  }, [currentUser, activeTab]);
-
-  const handleSaveOfflineDraft = async () => {
-    if (!currentUser) return;
-    try {
-      const newDraft = await saveLocalDraft({
-        uuid: `draft-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        userEmail: currentUser.email,
-        parcelId: selectedParcel.id,
-        ulpin: selectedParcel.ulpin || `UP1428SNMPGN${selectedParcel.id.slice(-3).toUpperCase()}`,
-        notes: offlineDraftNotes,
-        gpsCoords: [80.9452, 26.9858],
-      });
-      setOfflineDrafts((prev) => [newDraft, ...prev]);
-      setOfflineSyncMessage('Draft saved locally in IndexedDB (Status: SAVED_ON_DEVICE)');
-      setTimeout(() => setOfflineSyncMessage(null), 3500);
-    } catch (err: any) {
-      alert(`Could not save draft locally: ${err.message}`);
-    }
-  };
-
-  const handleSyncSingleDraft = async (draft: OfflineEvidenceDraft) => {
-    setIsSyncingOffline(true);
-    try {
-      const res = await syncDraftToServer(draft);
-      await loadOfflineDrafts();
-      setOfflineSyncMessage(
-        res.wasDeduplicated
-          ? 'Server recognized duplicate record: Idempotent deduplication confirmed.'
-          : `Draft ${draft.uuid.slice(0, 12)} successfully synced to server ledger!`
-      );
-      setTimeout(() => setOfflineSyncMessage(null), 3500);
-    } catch (err: any) {
-      alert(`Sync failed: ${err.message}`);
-    } finally {
-      setIsSyncingOffline(false);
-    }
-  };
-
-  const handleSyncAllDrafts = async () => {
-    setIsSyncingOffline(true);
-    try {
-      for (const d of offlineDrafts) {
-        if (d.status !== 'SYNCED') {
-          await syncDraftToServer(d);
-        }
-      }
-      await loadOfflineDrafts();
-      setOfflineSyncMessage('All pending local drafts synced to server.');
-      setTimeout(() => setOfflineSyncMessage(null), 3500);
-    } catch (err: any) {
-      alert(`Sync error: ${err.message}`);
-    } finally {
-      setIsSyncingOffline(false);
-    }
-  };
-
-  const handleRunOfflineTest = async () => {
-    if (!currentUser) return;
-    setIsRunningOfflineTest(true);
-    setOfflineTestResult(null);
-    try {
-      const result = await runDisconnectSyncTwiceTest(
-        currentUser.email,
-        selectedParcel.id,
-        selectedParcel.ulpin || `UP1428SNMPGN${selectedParcel.id.slice(-3).toUpperCase()}`
-      );
-      setOfflineTestResult(result);
-      await loadOfflineDrafts();
-    } catch (err: any) {
-      alert(`Offline test error: ${err.message}`);
-    } finally {
-      setIsRunningOfflineTest(false);
-    }
-  };
 
   // IF NOT AUTHENTICATED: Show GovTech RBAC Login Gate
   if (!currentUser) {
@@ -827,17 +724,6 @@ export const OfficerPortal: React.FC<Props> = ({
           <span>RoR OCR</span>
         </button>
 
-        <button
-          onClick={() => setActiveTab('offline')}
-          className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all flex items-center justify-center gap-1 ${
-            activeTab === 'offline'
-              ? 'bg-[#23201F] text-white shadow-xs'
-              : 'hover:bg-white/40 text-blue-700'
-          }`}
-        >
-          <Database className="w-3.5 h-3.5 text-blue-500" />
-          <span>Offline Evidence</span>
-        </button>
 
         <button
           onClick={() => setActiveTab('ledger')}
@@ -1189,211 +1075,6 @@ export const OfficerPortal: React.FC<Props> = ({
         </div>
       )}
 
-      {/* ===================== TAB: OFFLINE FIELD EVIDENCE (DEXIE.JS) ===================== */}
-      {activeTab === 'offline' && (
-        <div className="space-y-4 animate-in fade-in duration-150">
-          {/* Header Action Bar */}
-          <div className="bg-white p-4 rounded-2xl border border-[#E7DFD5] shadow-xs flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <Database className="w-5 h-5 text-blue-600" />
-                <h3 className="font-bold text-sm text-[#23201F]">
-                  Offline Field Evidence Engine (Dexie.js IndexedDB)
-                </h3>
-              </div>
-              <p className="text-xs text-gray-500 mt-0.5">
-                3-stage lifecycle (<span className="text-amber-700 font-bold">SAVED_ON_DEVICE</span> → <span className="text-blue-700 font-bold">PENDING_SYNC</span> → <span className="text-emerald-700 font-bold">SYNCED</span>) with server-side deduplication.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleRunOfflineTest}
-                disabled={isRunningOfflineTest}
-                className="px-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs disabled:opacity-50"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isRunningOfflineTest ? 'animate-spin' : ''}`} />
-                <span>{isRunningOfflineTest ? 'Running Benchmark...' : 'Run Disconnect → Sync Twice Benchmark'}</span>
-              </button>
-
-              <button
-                onClick={handleSyncAllDrafts}
-                disabled={isSyncingOffline || offlineDrafts.length === 0}
-                className="px-3 py-1.5 bg-[#23201F] hover:bg-black text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs disabled:opacity-50"
-              >
-                <CheckCheck className="w-3.5 h-3.5" />
-                <span>Sync All Pending Drafts</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Sync notification message */}
-          {offlineSyncMessage && (
-            <div className="bg-blue-50 border border-blue-200 text-blue-900 p-3 rounded-xl text-xs flex items-center gap-2 animate-in fade-in duration-150">
-              <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
-              <span className="font-medium">{offlineSyncMessage}</span>
-            </div>
-          )}
-
-          {/* Benchmark Test Result Display */}
-          {offlineTestResult && (
-            <div className={`p-4 rounded-2xl border text-xs space-y-2 ${
-              offlineTestResult.testPassed
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
-                : 'bg-red-50 border-red-200 text-red-900'
-            }`}>
-              <div className="flex items-center justify-between">
-                <span className="font-extrabold flex items-center gap-1.5 text-sm">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>Idempotent Deduplication Benchmark Verified</span>
-                </span>
-                <span className="bg-emerald-200 text-emerald-900 font-mono text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  PASS (100% Deterministic)
-                </span>
-              </div>
-              <p className="text-[11px] text-gray-700">
-                Simulated rural field disconnect: created local draft in IndexedDB, executed sync #1, re-executed sync #2 with identical client UUIDv4.
-              </p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 font-mono text-[10px] bg-white/70 p-2.5 rounded-xl border border-black/5">
-                <div>
-                  <span className="text-gray-400 block">Client Draft UUID:</span>
-                  <span className="font-bold truncate block">{offlineTestResult.draftUuid}</span>
-                </div>
-                <div>
-                  <span className="text-gray-400 block">First Sync (#1):</span>
-                  <span className="font-bold text-emerald-700">Ingested (dedup=false)</span>
-                </div>
-                <div>
-                  <span className="text-gray-400 block">Second Sync (#2):</span>
-                  <span className="font-bold text-blue-700">Deduplicated (dedup=true)</span>
-                </div>
-                <div>
-                  <span className="text-gray-400 block">Server Records:</span>
-                  <span className="font-bold text-purple-700">Exactly 1 Record Preserved</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Field Draft Creator */}
-          <div className="bg-[#FAF7F2] p-4 rounded-2xl border border-[#E7DFD5] space-y-3">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-[#23201F] flex items-center gap-1.5">
-                <Smartphone className="w-4 h-4 text-[#C85A32]" />
-                Record Offline Field Verification Note
-              </span>
-              <span className="font-mono text-[11px] bg-white px-2 py-0.5 rounded border border-[#E7DFD5] text-gray-600">
-                ULPIN: {selectedParcel.ulpin || selectedParcel.id}
-              </span>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-semibold text-gray-600 mb-1">
-                Field Surveyor Ground Observation:
-              </label>
-              <textarea
-                rows={2}
-                value={offlineDraftNotes}
-                onChange={(e) => setOfflineDraftNotes(e.target.value)}
-                className="w-full text-xs p-2.5 bg-white border border-[#E7DFD5] rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-800"
-                placeholder="e.g. Boundary marker stone located at northern offset; no unauthorized construction observed."
-              />
-            </div>
-
-            <div className="flex items-center justify-between gap-2 pt-1">
-              <div className="flex items-center gap-2 text-[10px] text-gray-500 font-mono">
-                <span className="flex items-center gap-1">
-                  <WifiOff className="w-3 h-3 text-amber-600" />
-                  Local IndexedDB Engine
-                </span>
-                <span>• GPS: [80.9452, 26.9858]</span>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleSaveOfflineDraft}
-                className="px-3.5 py-2 bg-[#C85A32] hover:bg-[#a64420] text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs"
-              >
-                <Database className="w-3.5 h-3.5" />
-                <span>Save Draft in IndexedDB (Offline)</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Local Drafts Store Table */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs font-bold text-[#23201F]">
-              <span>IndexedDB Cached Drafts ({offlineDrafts.length})</span>
-              <span className="text-[10px] text-gray-500 font-normal">Scoped to active officer profile</span>
-            </div>
-
-            {offlineDrafts.length === 0 ? (
-              <div className="bg-white p-6 rounded-2xl border border-[#E7DFD5] text-center text-xs text-gray-500">
-                No local drafts recorded. Click "Save Draft in IndexedDB" or run the Disconnect benchmark above.
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
-                {offlineDrafts.map((draft) => (
-                  <div
-                    key={draft.uuid}
-                    className="bg-white p-3.5 rounded-2xl border border-[#E7DFD5] shadow-2xs space-y-2 text-xs"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-[10px] font-bold text-gray-500">
-                          {draft.uuid.slice(0, 16)}...
-                        </span>
-                        <span className="font-bold text-[#23201F]">{draft.ulpin}</span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {draft.status === 'SAVED_ON_DEVICE' && (
-                          <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <Smartphone className="w-3 h-3 text-amber-600" />
-                            SAVED_ON_DEVICE
-                          </span>
-                        )}
-                        {draft.status === 'PENDING_SYNC' && (
-                          <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <RefreshCw className="w-3 h-3 text-blue-600 animate-spin" />
-                            PENDING_SYNC
-                          </span>
-                        )}
-                        {draft.status === 'SYNCED' && (
-                          <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <CheckCheck className="w-3 h-3 text-emerald-600" />
-                            SYNCED
-                          </span>
-                        )}
-
-                        <button
-                          onClick={() => handleSyncSingleDraft(draft)}
-                          disabled={isSyncingOffline}
-                          className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-800 text-[10px] font-bold rounded-lg transition-colors flex items-center gap-1"
-                        >
-                          <RefreshCw className="w-2.5 h-2.5" />
-                          <span>{draft.status === 'SYNCED' ? 'Re-Sync' : 'Sync'}</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    <p className="text-[#383432] bg-[#FAF7F2] p-2 rounded-xl border border-[#E7DFD5] text-[11px]">
-                      {draft.notes}
-                    </p>
-
-                    <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono">
-                      <span>Created: {new Date(draft.createdAt).toLocaleTimeString()}</span>
-                      {draft.gpsCoords && (
-                        <span>GPS: [{draft.gpsCoords[0]}, {draft.gpsCoords[1]}]</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* ===================== TAB 4: IMMUTABLE AUDIT LEDGER ===================== */}
       {activeTab === 'ledger' && (
