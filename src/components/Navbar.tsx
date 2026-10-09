@@ -7,8 +7,6 @@ interface Props {
   onRoleChange: (role: Role) => void;
   onOpenRegistryModal: () => void;
   totalParcelsCount: number;
-  datasetMode?: 'tracgis' | 'svamitva';
-  onDatasetModeChange?: (mode: 'tracgis' | 'svamitva') => void;
 }
 
 export const Navbar: React.FC<Props> = ({
@@ -16,8 +14,6 @@ export const Navbar: React.FC<Props> = ({
   onRoleChange,
   onOpenRegistryModal,
   totalParcelsCount,
-  datasetMode = 'tracgis',
-  onDatasetModeChange,
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-[#C85A32] text-white shadow-md border-b border-[#A94424]">
@@ -37,37 +33,10 @@ export const Navbar: React.FC<Props> = ({
               </span>
             </div>
             <p className="text-[11px] text-[#F3ECE2] font-medium hidden sm:block">
-              Bharat Unified Land Stack • KPR Institute of Engineering and Technology
+              Bharat Unified Land Stack • KPR Institute of Engineering and Technology ({totalParcelsCount} Cadastral Records)
             </p>
           </div>
         </div>
-
-        {/* Center: Dataset Mode Switcher (TRACGIS vs SVAMITVA Drone Survey) */}
-        {onDatasetModeChange && (
-          <div className="hidden lg:flex items-center bg-black/25 p-1 rounded-xl border border-white/15 text-xs font-bold">
-            <button
-              onClick={() => onDatasetModeChange('tracgis')}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
-                datasetMode === 'tracgis'
-                  ? 'bg-[#23201F] text-white shadow-xs'
-                  : 'text-white/80 hover:text-white'
-              }`}
-            >
-              🗺️ TRACGIS Cadastre ({totalParcelsCount})
-            </button>
-            <button
-              onClick={() => onDatasetModeChange('svamitva')}
-              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
-                datasetMode === 'svamitva'
-                  ? 'bg-[#23201F] text-white shadow-xs'
-                  : 'text-white/80 hover:text-white'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>🛰️ SVAMITVA Drone Survey (73)</span>
-            </button>
-          </div>
-        )}
 
         {/* Right: Role Switcher & Ingestion Button */}
         <div className="flex items-center gap-2 sm:gap-3">

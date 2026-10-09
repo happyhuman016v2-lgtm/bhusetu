@@ -21,17 +21,35 @@ import { Navbar } from './components/Navbar';
 import { MapEngine } from './components/MapEngine';
 import { CitizenPortal } from './components/CitizenPortal';
 import { OfficerPortal } from './components/OfficerPortal';
-import { SvamitvaPortal } from './components/SvamitvaPortal';
 import { MockRegistryModal } from './components/MockRegistryModal';
 
 export const App: React.FC = () => {
-  // Dataset Mode: TRACGIS Cadastre vs SVAMITVA Drone Survey
-  const [datasetMode, setDatasetMode] = useState<'tracgis' | 'svamitva'>('tracgis');
+
+  // Extract all official notified buffer zones across the cadastre
+  const allNotifiedBufferZones = React.useMemo(() => {
+    return INITIAL_PARCELS
+      .filter((p) => p.bufferZone && p.bufferZone.geometry)
+      .map((p) => ({
+        id: p.id,
+        name: p.bufferZone!.name,
+        type: p.bufferZone!.type,
+        geometry: p.bufferZone!.geometry,
+      }));
+  }, []);
 
   // TRACGIS Parcels State
   const [parcels, setParcels] = useState<Parcel[]>(() => {
+    const buffers = INITIAL_PARCELS
+      .filter((p) => p.bufferZone && p.bufferZone.geometry)
+      .map((p) => ({
+        id: p.id,
+        name: p.bufferZone!.name,
+        type: p.bufferZone!.type,
+        geometry: p.bufferZone!.geometry,
+      }));
+
     return INITIAL_PARCELS.map((p) => {
-      const analysis = analyzeParcelSpatialIntegrity(p);
+      const analysis = analyzeParcelSpatialIntegrity(p, buffers);
       return {
         ...p,
         trustScore: analysis.trustScore,
@@ -216,7 +234,17 @@ export const App: React.FC = () => {
   };
 
   const handleIngestParcels = (newParcels: Parcel[]) => {
-    setParcels(newParcels);
+    const analyzed = newParcels.map((p) => {
+      const analysis = analyzeParcelSpatialIntegrity(p, allNotifiedBufferZones);
+      return {
+        ...p,
+        trustScore: analysis.trustScore,
+        trustGrade: analysis.trustGrade,
+        status: analysis.status,
+        violations: analysis.detectedViolations,
+      };
+    });
+    setParcels(analyzed);
   };
 
   return (
@@ -227,8 +255,6 @@ export const App: React.FC = () => {
         onRoleChange={setActiveRole}
         onOpenRegistryModal={() => setIsRegistryModalOpen(true)}
         totalParcelsCount={parcels.length}
-        datasetMode={datasetMode}
-        onDatasetModeChange={setDatasetMode}
       />
 
       {/* Main Content: 2-Column Split View with Expandable Map */}
@@ -236,19 +262,7 @@ export const App: React.FC = () => {
         {/* Left Column (Hidden when Map is Expanded) */}
         {!isMapExpanded && (
           <div className="lg:col-span-4 xl:col-span-3.5 overflow-y-auto max-h-[calc(100vh-100px)] pr-1">
-            {datasetMode === 'svamitva' ? (
-              <SvamitvaPortal
-                parcels={svamitvaParcels}
-                selectedParcel={selectedSvamitvaParcel}
-                onSelectParcel={handleSelectSvamitvaParcel}
-                bufferDistance={bufferDistance}
-                onBufferDistanceChange={setBufferDistance}
-                encroachmentResults={encroachmentResults}
-                isAnalyzing={isAnalyzingEncroachments}
-                onRunAnalysis={() => handleRunEncroachments(bufferDistance)}
-                onParcelsUpdated={handleReloadSvamitva}
-              />
-            ) : activeRole === 'citizen' ? (
+            {activeRole === 'citizen' ? (
               <CitizenPortal
                 parcels={parcels}
                 selectedParcel={selectedParcel}
@@ -266,6 +280,12 @@ export const App: React.FC = () => {
                 onApprovePartition={handleApprovePartition}
                 auditLogs={auditLogs}
                 onAddAuditLog={handleAddAuditLog}
+                bufferDistance={bufferDistance}
+                onBufferDistanceChange={setBufferDistance}
+                encroachmentResults={encroachmentResults}
+                isAnalyzingEncroachments={isAnalyzingEncroachments}
+                onRunAnalysis={() => handleRunEncroachments(bufferDistance)}
+                onParcelsUpdated={handleReloadSvamitva}
               />
             )}
           </div>
@@ -278,15 +298,11 @@ export const App: React.FC = () => {
           } h-[600px] lg:h-[calc(100vh-100px)] sticky top-18`}
         >
           <MapEngine
-            datasetMode={datasetMode}
             parcels={parcels}
             selectedParcelId={selectedParcelId}
             selectionEpoch={selectionEpoch}
             onSelectParcel={handleSelectParcel}
             activePartition={activePartition}
-            svamitvaParcels={svamitvaParcels}
-            selectedSvamitvaParcelId={selectedSvamitvaParcelId}
-            onSelectSvamitvaParcel={handleSelectSvamitvaParcel}
             bufferDistance={bufferDistance}
             onBufferDistanceChange={setBufferDistance}
             encroachmentResults={encroachmentResults}
@@ -303,10 +319,10 @@ export const App: React.FC = () => {
       <footer className="bg-[#23201F] text-[#E7DFD5] text-xs py-3 px-4 border-t border-[#383432]">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
           <div>
-            <span className="font-bold text-white">BhuSetu v2.0</span> • Bharat Unified Land Stack • SVAMITVA Rural Drone Cadastre Pipeline
+            <span className="font-bold text-white">BhuSetu v2.0</span> • Bharat Unified Land Stack • Cadastral & Right-of-Way GIS Pipeline
           </div>
           <div className="text-[11px] text-[#A89F91]">
-            Survey of India (SoI) • Ministry of Panchayati Raj • Large-Scale Rural UAV Mapping
+            Digital India Land Records • Survey of India • High-Precision Geodesic Demarcation
           </div>
         </div>
       </footer>

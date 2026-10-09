@@ -35,7 +35,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   parcelId: string;
-  fallbackParcel?: SvamitvaParcel;
+  fallbackParcel?: any;
 }
 
 export const RoRDossierModal: React.FC<Props> = ({
@@ -853,22 +853,132 @@ export const RoRDossierModal: React.FC<Props> = ({
 /**
  * Fallback synthesizer in case backend is unreachable during offline test
  */
-function createClientFallbackDossier(parcel: SvamitvaParcel): RoRDossier {
-  const p = parcel.properties;
-  const area = p.area_sq_mtr;
+function createClientFallbackDossier(parcel: any): RoRDossier {
+  // If standard Parcel (from TRACGIS / Cadastral database)
+  if (parcel.surveyNumber || parcel.ulpin) {
+    const area = parcel.area?.gisSqm || 1200;
+    const regArea = parcel.area?.rorSqm || area;
+    const varianceSqm = area - regArea;
+    const variancePct = regArea > 0 ? ((area - regArea) / regArea) * 100.0 : 0.0;
+
+    return {
+      parcel_id: parcel.id,
+      ulpin: parcel.ulpin || `14-8842-${parcel.id.replace(/\D/g, '').padStart(4, '0')}-2026`,
+      scheme: 'Bhu-Aadhaar National Cadastral Registry',
+      gharouni_card_no: `BHU-${parcel.id.toUpperCase()}`,
+      khata_number: `KH-${parcel.surveyNumber?.replace(/\D/g, '') || '402'}`,
+      khasra_number: parcel.surveyNumber || 'Plot-101',
+      survey_plot_no: parcel.surveyNumber || 'Plot-101',
+      tenure_type: parcel.owner?.type || 'Statutory Freehold',
+      spatial: {
+        centroid_wgs84: [78.3268, 17.5507],
+        actual_drone_area_sqm: area,
+        actual_drone_area_acres: parseFloat((area * 0.000247105).toFixed(4)),
+        accuracy_class: 'High-Precision WGS84 Geodesic Cadastre',
+        survey_date: '12-Mar-2026',
+      },
+      legal_registry: {
+        recorded_legal_area_sqm: regArea,
+        recorded_legal_area_acres: parseFloat((regArea * 0.000247105).toFixed(4)),
+        area_unit_regional: parcel.area?.regionalUnit || 'Square Metres',
+        registry_source: 'National Land Records Modernization Programme (NLRMP)',
+      },
+      variance_analysis: {
+        variance_sqm: parseFloat(varianceSqm.toFixed(2)),
+        variance_pct: parseFloat(variancePct.toFixed(2)),
+        within_statutory_tolerance: Math.abs(variancePct) <= 5.0,
+        evaluation:
+          Math.abs(variancePct) <= 5.0
+            ? 'VERIFIED_WITHIN_STATUTORY_TOLERANCE'
+            : 'SURVEY_MISMATCH_SUSPECTED_ENCROACHMENT',
+      },
+      chauhaddi: {
+        north: {
+          boundary_type: 'PARCEL',
+          plot_no: 'Adjacent Survey North',
+          owner: 'Revenue Boundary / Agricultural Patta',
+          description: 'Survey North — Cultivated Holding',
+        },
+        south: {
+          boundary_type: 'PUBLIC_ROAD',
+          plot_no: 'Public Corridor',
+          owner: 'Public Right-of-Way',
+          description: 'Public Road Access Corridor (4m Paved)',
+        },
+        east: {
+          boundary_type: 'PARCEL',
+          plot_no: 'Adjacent Survey East',
+          owner: 'Private Holding',
+          description: 'Survey East — Freehold Holding',
+        },
+        west: {
+          boundary_type: 'PARCEL',
+          plot_no: 'Adjacent Survey West',
+          owner: 'Private Holding',
+          description: 'Survey West — Natural Waterway / Field Ridge',
+        },
+      },
+      pattadars: parcel.coOwners && parcel.coOwners.length > 0
+        ? parcel.coOwners.map((c: any, idx: number) => ({
+            pattadar_id: `PAT-0${idx + 1}`,
+            name: c.name,
+            relation: c.relation || 'Co-Sharer',
+            share_pct: c.sharePercent || Math.round(100 / parcel.coOwners.length),
+            equity_area_sqm: Math.round(area * ((c.sharePercent || 50) / 100)),
+            status: 'Active',
+          }))
+        : [
+            {
+              pattadar_id: 'PAT-01',
+              name: parcel.owner?.name || 'Registered Landowner',
+              relation: 'Self / Primary Titleholder',
+              share_pct: 100.0,
+              equity_area_sqm: area,
+              status: 'Active',
+            },
+          ],
+      encumbrances: parcel.encumbrances || [],
+      dispute_flags:
+        parcel.violations && parcel.violations.length > 0
+          ? parcel.violations.map((v: any) => ({
+              flag_code: v.type || 'STATUTORY_CONFLICT',
+              severity: 'WARNING',
+              title: v.title,
+              description: v.description,
+              statutory_ref: v.statutoryClause || 'State Land Revenue Act',
+            }))
+          : [],
+      title_confidence: {
+        score: parcel.trustScore || 94,
+        grade: parcel.trustGrade || 'A',
+        status: parcel.status === 'CLEAN' ? 'Clear Marketable Title' : 'Boundary Verification Recommended',
+      },
+      location: {
+        village: parcel.village || 'Sultanpur',
+        tehsil: parcel.taluk || 'Ameenpur Mandal',
+        district: parcel.district || 'Sangareddy',
+        state: parcel.state || 'Telangana',
+        village_lgd_code: 'LGD-59281',
+      },
+    };
+  }
+
+  // Otherwise, SVAMITVA Parcel format
+  const p = parcel.properties || {};
+  const area = p.area_sq_mtr || 150;
   const regArea = Math.round(area * 0.94);
   const varianceSqm = area - regArea;
   const variancePct = ((area - regArea) / regArea) * 100.0;
 
   return {
     parcel_id: parcel.id,
-    ulpin: `UP1428${parcel.id.replace(/\D/g, '').padStart(6, '0')}`,
+    ulpin: `UP1428${parcel.id?.replace(/\D/g, '').padStart(6, '0') || '000101'}`,
     scheme: 'SVAMITVA (Survey of India)',
-    gharouni_card_no: p.gharouni_card_no,
+    gharouni_card_no: p.gharouni_card_no || 'GH-0101',
     khata_number: 'KH-882',
-    khasra_number: p.survey_plot_no,
-    survey_plot_no: p.survey_plot_no,
-    tenure_type: p.land_type === 'Residential' ? 'Abadi Residential (Transferable Ownership)' : p.land_type,
+    khasra_number: p.survey_plot_no || 'Plot 101',
+    survey_plot_no: p.survey_plot_no || 'Plot 101',
+    tenure_type: p.land_type === 'Residential' ? 'Abadi Residential (Transferable Ownership)' : (p.land_type || 'Abadi Land'),
     spatial: {
       centroid_wgs84: [77.568, 28.524],
       actual_drone_area_sqm: area,
@@ -920,7 +1030,7 @@ function createClientFallbackDossier(parcel: SvamitvaParcel): RoRDossier {
     pattadars: [
       {
         pattadar_id: 'PAT-01',
-        name: p.owner_name,
+        name: p.owner_name || 'Landowner',
         relation: 'Self / Primary Allottee',
         share_pct: 100.0,
         equity_area_sqm: area,
@@ -948,11 +1058,11 @@ function createClientFallbackDossier(parcel: SvamitvaParcel): RoRDossier {
       status: Math.abs(variancePct) <= 5.0 ? 'Clear Marketable Title' : 'Boundary Resurvey Recommended',
     },
     location: {
-      village: p.village,
-      tehsil: p.tehsil,
-      district: p.district,
-      state: p.state,
-      village_lgd_code: p.village_lgd_code,
+      village: p.village || 'Rampur Kalan',
+      tehsil: p.tehsil || 'Bakshi Ka Talab',
+      district: p.district || 'Lucknow',
+      state: p.state || 'Uttar Pradesh',
+      village_lgd_code: p.village_lgd_code || 'LGD-13982',
     },
   };
 }

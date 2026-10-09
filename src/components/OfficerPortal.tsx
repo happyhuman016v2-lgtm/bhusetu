@@ -66,7 +66,29 @@ import {
   WifiOff,
   Smartphone,
   CheckCheck,
+  Globe,
+  Trash2,
+  Printer,
 } from 'lucide-react';
+import {
+  EncroachmentConflict,
+  EncroachmentAnalysisResult,
+  RoadSourceMetadata,
+} from '../types';
+import {
+  fetchSurveySourceState,
+  uploadSurveyGeoJSON,
+  testWFSConnection,
+  loadDemoSurvey,
+  clearSurveySource,
+  fetchRoadSourceState,
+  uploadRoadGeoJSON,
+  loadDemoRoad,
+  clearRoadSource,
+  SurveySourceMetadata,
+  SurveyUploadResponse,
+} from '../services/svamitvaService';
+import { RoRDossierModal } from './RoRDossierModal';
 
 interface Props {
   parcels: Parcel[];
@@ -76,6 +98,12 @@ interface Props {
   onApprovePartition: (partition: PartitionResult) => void;
   auditLogs: OfficerAuditEntry[];
   onAddAuditLog: (entry: Omit<OfficerAuditEntry, 'id' | 'timestamp' | 'hash'>) => void;
+  bufferDistance?: number;
+  onBufferDistanceChange?: (dist: number) => void;
+  encroachmentResults?: EncroachmentAnalysisResult | null;
+  isAnalyzingEncroachments?: boolean;
+  onRunAnalysis?: () => void;
+  onParcelsUpdated?: () => void;
 }
 
 export const OfficerPortal: React.FC<Props> = ({
@@ -86,6 +114,12 @@ export const OfficerPortal: React.FC<Props> = ({
   onApprovePartition,
   auditLogs,
   onAddAuditLog,
+  bufferDistance = 3.0,
+  onBufferDistanceChange,
+  encroachmentResults,
+  isAnalyzingEncroachments = false,
+  onRunAnalysis,
+  onParcelsUpdated,
 }) => {
   // Authentication State
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(getStoredUser());
@@ -94,8 +128,38 @@ export const OfficerPortal: React.FC<Props> = ({
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  // Tabs: 'triage' | 'proposals' | 'ocr' | 'offline' | 'ledger'
-  const [activeTab, setActiveTab] = useState<'triage' | 'proposals' | 'ocr' | 'offline' | 'ledger'>('triage');
+  // Tabs: 'triage' | 'proposals' | 'ocr' | 'offline' | 'ledger' | 'gis'
+  const [activeTab, setActiveTab] = useState<'triage' | 'proposals' | 'ocr' | 'offline' | 'ledger' | 'gis'>('triage');
+
+  // GIS & Survey Ingestion State
+  const [sourceMeta, setSourceMeta] = useState<SurveySourceMetadata | null>(null);
+  const [surveyFile, setSurveyFile] = useState<File | null>(null);
+  const [supplierInput, setSupplierInput] = useState<string>('');
+  const [surveyDateInput, setSurveyDateInput] = useState<string>('2026-10-08');
+  const [accuracyInput, setAccuracyInput] = useState<string>('Sub-5cm Drone Photogrammetry');
+  const [isUploadingSurvey, setIsUploadingSurvey] = useState<boolean>(false);
+  const [uploadResult, setUploadResult] = useState<SurveyUploadResponse | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // WFS State
+  const [wfsUrl, setWfsUrl] = useState<string>('https://svamitva.nic.in/geoserver/wfs');
+  const [wfsLayer, setWfsLayer] = useState<string>('svamitva:cadastral_drone_parcels');
+  const [isTestingWFS, setIsTestingWFS] = useState<boolean>(false);
+  const [wfsTestResult, setWfsTestResult] = useState<any | null>(null);
+
+  // Road Source State
+  const [roadMeta, setRoadMeta] = useState<RoadSourceMetadata | null>(null);
+  const [roadFile, setRoadFile] = useState<File | null>(null);
+  const [roadSupplierInput, setRoadSupplierInput] = useState<string>('');
+  const [roadNameInput, setRoadNameInput] = useState<string>('');
+  const [isUploadingRoad, setIsUploadingRoad] = useState<boolean>(false);
+  const [uploadRoadResult, setUploadRoadResult] = useState<any | null>(null);
+  const [uploadRoadError, setUploadRoadError] = useState<string | null>(null);
+
+  // Conflict / Notice State
+  const [selectedConflict, setSelectedConflict] = useState<EncroachmentConflict | null>(null);
+  const [showNoticeModal, setShowNoticeModal] = useState<boolean>(false);
+  const [showRoRDossierModal, setShowRoRDossierModal] = useState<boolean>(false);
 
   // Boundary Proposal Editor State
   const [showProposalEditor, setShowProposalEditor] = useState<boolean>(false);
@@ -157,7 +221,154 @@ export const OfficerPortal: React.FC<Props> = ({
   useEffect(() => {
     fetchLedgerBlocks().then((blocks) => setLedgerBlocks(blocks));
     fetchProposals().then((props) => setProposalsList(props));
+    loadSourceState();
+    loadRoadState();
   }, []);
+
+  // Load Survey & Road Source State
+  const loadSourceState = async () => {
+    try {
+      const res = await fetchSurveySourceState();
+      if (res?.metadata) setSourceMeta(res.metadata);
+    } catch (e) {
+      console.warn('Failed to fetch survey source state:', e);
+    }
+  };
+
+  const loadRoadState = async () => {
+    try {
+      const res = await fetchRoadSourceState();
+      if (res?.metadata) setRoadMeta(res.metadata);
+    } catch (e) {
+      console.warn('Failed to fetch road source state:', e);
+    }
+  };
+
+  const handleSurveyFileUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!surveyFile) {
+      setUploadError('Please select a GeoJSON survey file.');
+      return;
+    }
+    setIsUploadingSurvey(true);
+    setUploadError(null);
+    setUploadResult(null);
+
+    try {
+      const result = await uploadSurveyGeoJSON(
+        surveyFile,
+        supplierInput || 'Field Survey Agency',
+        accuracyInput || 'Sub-5cm Drone Photogrammetry',
+        surveyDateInput || new Date().toISOString().split('T')[0]
+      );
+      setUploadResult(result);
+      await loadSourceState();
+      if (onParcelsUpdated) onParcelsUpdated();
+      onAddAuditLog({
+        officerName: currentUser?.full_name || 'Revenue Officer',
+        designation: currentUser?.designation || 'Tahsildar',
+        action: 'DISCREPANCY_REINSPECT_FLAGGED',
+        parcelId: selectedParcel.id,
+        surveyNumber: selectedParcel.surveyNumber,
+        details: `Imported Cadastral GeoJSON: ${result.imported_count} features. SHA-256: ${result.metadata?.sha256_checksum?.slice(0, 16)}...`,
+      });
+    } catch (err: any) {
+      setUploadError(err.message || 'Survey GeoJSON upload failed.');
+    } finally {
+      setIsUploadingSurvey(false);
+    }
+  };
+
+  const handleTestWFS = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsTestingWFS(true);
+    setWfsTestResult(null);
+    try {
+      const result = await testWFSConnection(wfsUrl, wfsLayer);
+      setWfsTestResult(result);
+    } catch (err: any) {
+      setWfsTestResult({
+        status: 'error',
+        message: err.message || 'WFS Connection Test failed.',
+      });
+    } finally {
+      setIsTestingWFS(false);
+    }
+  };
+
+  const handleLoadDemoSurvey = async () => {
+    try {
+      await loadDemoSurvey();
+      await loadSourceState();
+      if (onParcelsUpdated) onParcelsUpdated();
+    } catch (err: any) {
+      alert(`Failed to load demo survey: ${err.message}`);
+    }
+  };
+
+  const handleClearSurvey = async () => {
+    try {
+      await clearSurveySource();
+      await loadSourceState();
+      if (onParcelsUpdated) onParcelsUpdated();
+    } catch (err: any) {
+      alert(`Failed to clear survey source: ${err.message}`);
+    }
+  };
+
+  const handleRoadFileUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!roadFile) {
+      setUploadRoadError('Please select a Road GeoJSON file.');
+      return;
+    }
+    setIsUploadingRoad(true);
+    setUploadRoadError(null);
+    setUploadRoadResult(null);
+
+    try {
+      const result = await uploadRoadGeoJSON(
+        roadFile,
+        roadSupplierInput || 'Road Authority / Field Survey',
+        roadNameInput || undefined
+      );
+      setUploadRoadResult(result);
+      await loadRoadState();
+      if (onParcelsUpdated) onParcelsUpdated();
+      onAddAuditLog({
+        officerName: currentUser?.full_name || 'Revenue Officer',
+        designation: currentUser?.designation || 'Tahsildar',
+        action: 'TRUST_SCORE_VERIFIED',
+        parcelId: selectedParcel.id,
+        surveyNumber: selectedParcel.surveyNumber,
+        details: `Imported Authoritative Road Vectors: ${result.imported_count} features.`,
+      });
+    } catch (err: any) {
+      setUploadRoadError(err.message || 'Road GeoJSON upload failed.');
+    } finally {
+      setIsUploadingRoad(false);
+    }
+  };
+
+  const handleLoadDemoRoad = async () => {
+    try {
+      await loadDemoRoad();
+      await loadRoadState();
+      if (onParcelsUpdated) onParcelsUpdated();
+    } catch (err: any) {
+      alert(`Failed to load demo road: ${err.message}`);
+    }
+  };
+
+  const handleClearRoad = async () => {
+    try {
+      await clearRoadSource();
+      await loadRoadState();
+      if (onParcelsUpdated) onParcelsUpdated();
+    } catch (err: any) {
+      alert(`Failed to clear road source: ${err.message}`);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -286,7 +497,7 @@ export const OfficerPortal: React.FC<Props> = ({
         ulpin: orderULPIN,
         discrepancy_reason: orderReason,
         target_accuracy: orderResolution,
-        statutory_clause: 'Uttar Pradesh Revenue Code 2006 (Sec 67-A) / SVAMITVA Directive',
+        statutory_clause: 'Survey and Boundaries Act / State Cadastral Resurvey Directive (Sec 67-A)',
       });
 
       setOrderSuccessMsg(
@@ -524,17 +735,27 @@ export const OfficerPortal: React.FC<Props> = ({
           </div>
         </div>
 
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-gray-300 hover:text-white transition-colors"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          <span>Exit Console</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowRoRDossierModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#C85A32]/30 hover:bg-[#C85A32] text-xs font-semibold text-white transition-colors border border-[#C85A32]/50"
+            title="Inspect comprehensive RoR Title Dossier & Property Card"
+          >
+            <FileText className="w-3.5 h-3.5 text-amber-300" />
+            <span>Title Dossier ({selectedParcel.surveyNumber})</span>
+          </button>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-gray-300 hover:text-white transition-colors"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Exit Console</span>
+          </button>
+        </div>
       </div>
 
       {/* Navigation Sub-Tabs */}
-      <div className="flex items-center gap-1 bg-[#E7DFD5] p-1 rounded-xl text-xs font-bold text-[#383432]">
+      <div className="flex items-center gap-1 bg-[#E7DFD5] p-1 rounded-xl text-xs font-bold text-[#383432] overflow-x-auto">
         <button
           onClick={() => setActiveTab('triage')}
           className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all ${
@@ -567,7 +788,7 @@ export const OfficerPortal: React.FC<Props> = ({
           }`}
         >
           <Upload className="w-3.5 h-3.5" />
-          <span>RoR OCR & Duplicates</span>
+          <span>RoR OCR</span>
         </button>
 
         <button
@@ -592,6 +813,18 @@ export const OfficerPortal: React.FC<Props> = ({
         >
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
           <span>Immutable Ledger</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('gis')}
+          className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all flex items-center justify-center gap-1 ${
+            activeTab === 'gis'
+              ? 'bg-[#23201F] text-white shadow-xs'
+              : 'hover:bg-white/40 text-amber-800'
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5 text-amber-600" />
+          <span>Cadastre & Roads</span>
         </button>
       </div>
 
@@ -1355,6 +1588,361 @@ export const OfficerPortal: React.FC<Props> = ({
         </div>
       )}
 
+      {/* ===================== TAB 6: CADASTRE & ROADS (GIS INGESTION & CORRIDORS) ===================== */}
+      {activeTab === 'gis' && (
+        <div className="space-y-4">
+          {/* Header Card */}
+          <div className="bg-white border border-[#E7DFD5] rounded-2xl p-4 shadow-2xs space-y-1">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Layers className="w-5 h-5 text-[#C85A32]" />
+                <h3 className="font-bold text-sm text-[#23201F]">
+                  Cadastral GIS Ingestion & Authoritative Road Corridors
+                </h3>
+              </div>
+              <span className="text-[10px] bg-[#FAF7F2] border border-[#E7DFD5] text-[#6B6360] px-2 py-0.5 rounded-full font-bold">
+                Multi-Source GIS Pipeline
+              </span>
+            </div>
+            <p className="text-xs text-[#6B6360]">
+              Ingest verified survey GeoJSON, test remote OGC WFS GeoServer feeds, and perform high-precision metric right-of-way corridor conflict analysis.
+            </p>
+          </div>
+
+          {/* 1. CADASTRAL SURVEY SOURCE PROVENANCE */}
+          <div className="bg-white border border-[#E7DFD5] rounded-2xl p-4 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4 text-emerald-700" />
+                <h4 className="font-bold text-xs text-[#23201F]">Cadastral Parcel Source Provenance</h4>
+              </div>
+              <span
+                className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                  sourceMeta?.state === 'CONFIGURED_WFS'
+                    ? 'bg-blue-100 text-blue-800'
+                    : sourceMeta?.state === 'UPLOADED_FILE'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : sourceMeta?.state === 'SYNTHETIC_DEMO'
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                {sourceMeta?.state || 'NO_SOURCE'}
+              </span>
+            </div>
+
+            {sourceMeta && (
+              <div className="bg-[#FAF7F2] p-3 rounded-xl border border-[#E7DFD5] space-y-1.5 text-xs">
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div>
+                    <span className="text-gray-500">Supplier:</span>{' '}
+                    <strong className="text-[#23201F]">{sourceMeta.supplier || 'N/A'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">CRS:</span>{' '}
+                    <strong className="text-[#23201F]">{sourceMeta.source_crs || 'EPSG:4326'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Features:</span>{' '}
+                    <strong className="text-[#23201F]">{sourceMeta.total_features} parcels</strong>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Survey Date:</span>{' '}
+                    <strong className="text-[#23201F]">{sourceMeta.survey_date || 'N/A'}</strong>
+                  </div>
+                </div>
+                {sourceMeta.sha256_checksum && (
+                  <div className="pt-1 border-t border-gray-200 text-[10px] font-mono text-gray-500 truncate">
+                    SHA-256: {sourceMeta.sha256_checksum}
+                  </div>
+                )}
+                {sourceMeta.disclaimer && (
+                  <p className="text-[10px] text-gray-500 italic mt-1">{sourceMeta.disclaimer}</p>
+                )}
+              </div>
+            )}
+
+            {/* Upload Survey GeoJSON Form */}
+            <form onSubmit={handleSurveyFileUpload} className="space-y-2.5 pt-1">
+              <label className="block text-xs font-bold text-[#23201F]">
+                Upload Survey GeoJSON (Polygon / MultiPolygon)
+              </label>
+              <input
+                type="file"
+                accept=".geojson,.json"
+                onChange={(e) => setSurveyFile(e.target.files?.[0] || null)}
+                className="w-full text-xs text-[#23201F] file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#C85A32] file:text-white hover:file:bg-[#A94424]"
+              />
+
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  placeholder="Supplier / Agency"
+                  value={supplierInput}
+                  onChange={(e) => setSupplierInput(e.target.value)}
+                  className="px-2.5 py-1.5 bg-[#FAF7F2] border border-[#E7DFD5] rounded-lg text-xs"
+                />
+                <input
+                  type="date"
+                  value={surveyDateInput}
+                  onChange={(e) => setSurveyDateInput(e.target.value)}
+                  className="px-2.5 py-1.5 bg-[#FAF7F2] border border-[#E7DFD5] rounded-lg text-xs"
+                />
+              </div>
+
+              {uploadError && (
+                <div className="p-2 bg-red-50 text-red-700 text-xs rounded-lg border border-red-200">
+                  {uploadError}
+                </div>
+              )}
+
+              {uploadResult && (
+                <div className="p-2 bg-emerald-50 text-emerald-800 text-xs rounded-lg border border-emerald-300">
+                  Successfully imported {uploadResult.imported_count} survey parcels!
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="submit"
+                  disabled={isUploadingSurvey}
+                  className="flex-1 py-2 px-3 bg-[#C85A32] hover:bg-[#A94424] text-white rounded-xl text-xs font-bold transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-2xs"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>{isUploadingSurvey ? 'Ingesting...' : 'Ingest Survey GeoJSON'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLoadDemoSurvey}
+                  className="px-3 py-2 bg-[#FAF7F2] border border-[#E7DFD5] hover:bg-gray-100 text-[#23201F] rounded-xl text-xs font-semibold transition-colors"
+                >
+                  Demo Survey
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearSurvey}
+                  className="p-2 text-gray-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition-colors"
+                  title="Clear survey source"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* 2. AUTHORITATIVE ROAD VECTORS */}
+          <div className="bg-white border border-[#E7DFD5] rounded-2xl p-4 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-amber-700" />
+                <h4 className="font-bold text-xs text-[#23201F]">Authoritative Road Network & Corridors</h4>
+              </div>
+              <span
+                className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                  roadMeta?.state === 'IMPORTED_ROAD' || roadMeta?.state === 'PUBLIC_VECTOR_ROAD'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : roadMeta?.state === 'SYNTHETIC_DEMO_ROAD'
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                {roadMeta?.state || 'NO_ROAD'}
+              </span>
+            </div>
+
+            {roadMeta && (
+              <div className="bg-[#FAF7F2] p-3 rounded-xl border border-[#E7DFD5] space-y-1 text-xs">
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div>
+                    <span className="text-gray-500">Authority:</span>{' '}
+                    <strong className="text-[#23201F]">{roadMeta.supplier || 'N/A'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Geometry:</span>{' '}
+                    <strong className="text-[#23201F]">{roadMeta.geometry_interpretation || 'LineString / Polygon'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Segments:</span>{' '}
+                    <strong className="text-[#23201F]">{roadMeta.total_features} features</strong>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Road Name:</span>{' '}
+                    <strong className="text-[#23201F]">{roadMeta.source_name || 'Village Access Road'}</strong>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Upload Road GeoJSON Form */}
+            <form onSubmit={handleRoadFileUpload} className="space-y-2.5 pt-1">
+              <label className="block text-xs font-bold text-[#23201F]">
+                Upload Road GeoJSON (LineString Centerline or Polygon Corridor)
+              </label>
+              <input
+                type="file"
+                accept=".geojson,.json"
+                onChange={(e) => setRoadFile(e.target.files?.[0] || null)}
+                className="w-full text-xs text-[#23201F] file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#23201F] file:text-white hover:file:bg-black"
+              />
+
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  placeholder="Road Authority (e.g. PWD / Panchayat)"
+                  value={roadSupplierInput}
+                  onChange={(e) => setRoadSupplierInput(e.target.value)}
+                  className="px-2.5 py-1.5 bg-[#FAF7F2] border border-[#E7DFD5] rounded-lg text-xs"
+                />
+                <input
+                  type="text"
+                  placeholder="Road Corridor Name"
+                  value={roadNameInput}
+                  onChange={(e) => setRoadNameInput(e.target.value)}
+                  className="px-2.5 py-1.5 bg-[#FAF7F2] border border-[#E7DFD5] rounded-lg text-xs"
+                />
+              </div>
+
+              {uploadRoadError && (
+                <div className="p-2 bg-red-50 text-red-700 text-xs rounded-lg border border-red-200">
+                  {uploadRoadError}
+                </div>
+              )}
+
+              {uploadRoadResult && (
+                <div className="p-2 bg-emerald-50 text-emerald-800 text-xs rounded-lg border border-emerald-300">
+                  Successfully imported {uploadRoadResult.imported_count} road vectors!
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="submit"
+                  disabled={isUploadingRoad}
+                  className="flex-1 py-2 px-3 bg-[#23201F] hover:bg-black text-white rounded-xl text-xs font-bold transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-2xs"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>{isUploadingRoad ? 'Ingesting Road...' : 'Ingest Road Geometry'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLoadDemoRoad}
+                  className="px-3 py-2 bg-[#FAF7F2] border border-[#E7DFD5] hover:bg-gray-100 text-[#23201F] rounded-xl text-xs font-semibold transition-colors"
+                >
+                  Demo Road
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearRoad}
+                  className="p-2 text-gray-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition-colors"
+                  title="Clear road source"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* 3. METRIC BUFFER & SPATIAL CORRIDOR CONFLICT ANALYSIS */}
+          <div className="bg-white border border-[#E7DFD5] rounded-2xl p-4 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-[#C85A32]" />
+                <h4 className="font-bold text-xs text-[#23201F]">
+                  Metric Right-of-Way Buffer & Conflict Analysis
+                </h4>
+              </div>
+              <span className="font-mono font-bold text-xs bg-[#FAF7F2] border border-[#E7DFD5] px-2 py-0.5 rounded text-[#C85A32]">
+                {bufferDistance} m Corridor
+              </span>
+            </div>
+
+            <div className="space-y-1">
+              <input
+                type="range"
+                min="1.0"
+                max="20.0"
+                step="0.5"
+                value={bufferDistance}
+                onChange={(e) => onBufferDistanceChange && onBufferDistanceChange(parseFloat(e.target.value))}
+                className="w-full accent-[#C85A32] cursor-pointer"
+              />
+              <div className="flex justify-between text-[10px] text-gray-400 font-mono">
+                <span>1.0m (Narrow Gali)</span>
+                <span>5.0m (Village Road)</span>
+                <span>20.0m (State Highway)</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => onRunAnalysis && onRunAnalysis()}
+              disabled={isAnalyzingEncroachments}
+              className="w-full py-2.5 px-4 bg-[#C85A32] text-white rounded-xl text-xs font-bold hover:bg-[#A94424] transition-colors flex items-center justify-center gap-2 shadow-2xs disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isAnalyzingEncroachments ? 'animate-spin' : ''}`} />
+              <span>{isAnalyzingEncroachments ? 'Projecting UTM & Computing Overlaps...' : 'Run Spatial Corridor Analysis'}</span>
+            </button>
+
+            {/* Conflict Findings Output */}
+            {encroachmentResults && (
+              <div className="space-y-2 pt-2 border-t border-[#E7DFD5]">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#23201F]">
+                    Detected Encroachment Conflicts ({encroachmentResults.features?.length || 0})
+                  </span>
+                  <span className="text-[10px] text-gray-500">
+                    UTM Metric Calculation
+                  </span>
+                </div>
+
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {encroachmentResults.features && encroachmentResults.features.length > 0 ? (
+                    encroachmentResults.features.map((feat: any, idx: number) => {
+                      const props = feat.properties;
+                      return (
+                        <div
+                          key={idx}
+                          className="bg-[#FAF7F2] p-2.5 rounded-xl border border-amber-200 text-xs space-y-1 hover:border-amber-400 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-[#23201F]">
+                              Plot #{props.survey_plot_no || props.parcel_id || 'Plot'}
+                            </span>
+                            <span className="font-bold text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.2 rounded text-[10px]">
+                              {props.overlap_area_sqm} m² overlap
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[#6B6360]">
+                            Owner: <strong>{props.owner_name}</strong> • Corridor: {props.affected_asset}
+                          </p>
+                          <div className="flex items-center justify-between pt-1">
+                            <span className="text-[10px] text-amber-800 font-medium">
+                              {props.status || 'Potential Overlap'}
+                            </span>
+                            <button
+                              onClick={() => {
+                                setSelectedConflict(feat as any);
+                                setShowNoticeModal(true);
+                              }}
+                              className="px-2 py-0.5 bg-red-600 hover:bg-red-700 text-white rounded text-[10px] font-bold transition-colors"
+                            >
+                              Issue Notice
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="p-3 bg-emerald-50 text-emerald-800 text-xs rounded-xl border border-emerald-200 text-center">
+                      No statutory right-of-way corridor overlaps detected within {bufferDistance}m setback!
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* STATUTORY RESURVEY ORDER MODAL */}
       {showOrderModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
@@ -1407,15 +1995,15 @@ export const OfficerPortal: React.FC<Props> = ({
                 </div>
 
                 <div>
-                  <label className="block font-bold text-gray-700 mb-1">Target UAV Photogrammetry Resolution</label>
+                  <label className="block font-bold text-gray-700 mb-1">Target Ground / Drone Resurvey Precision</label>
                   <select
                     value={orderResolution}
                     onChange={(e) => setOrderResolution(e.target.value)}
                     className="w-full px-3 py-2 bg-[#FAF7F2] border border-[#E7DFD5] rounded-xl text-[#23201F]"
                   >
-                    <option value="< 3cm GSD UAV Photogrammetry">&lt; 3cm GSD (High-Density Abadi Setback)</option>
-                    <option value="< 5cm GSD Standard Drone">&lt; 5cm GSD (Standard SVAMITVA Flight)</option>
-                    <option value="Sub-Centimeter RTK-DGPS">Sub-Centimeter RTK-DGPS Ground Demarcation</option>
+                    <option value="< 3cm GSD UAV Photogrammetry">&lt; 3cm GSD (High-Precision Aerial Photogrammetry)</option>
+                    <option value="< 5cm GSD Standard Aerial">&lt; 5cm GSD (Standard Cadastral Aerial Survey)</option>
+                    <option value="Sub-Centimeter RTK-DGPS">Sub-Centimeter RTK-DGPS Ground Geodesic Demarcation</option>
                   </select>
                 </div>
 
@@ -1460,6 +2048,69 @@ export const OfficerPortal: React.FC<Props> = ({
         droneAreaSqm={selectedParcel.area.gisSqm}
         legalAreaSqm={selectedParcel.area.rorSqm}
         variancePct={Math.round(((selectedParcel.area.gisSqm - selectedParcel.area.rorSqm) / selectedParcel.area.rorSqm) * 1000) / 10}
+      />
+
+      {/* STATUTORY NOTICE MODAL */}
+      {showNoticeModal && selectedConflict && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl border border-gray-200 space-y-3.5 animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center justify-between border-b pb-2.5">
+              <div className="flex items-center gap-2 text-red-700">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+                <h3 className="font-bold text-sm text-[#23201F]">
+                  Statutory Encroachment Notice (Form-67 / Cadastre)
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowNoticeModal(false)}
+                className="text-gray-400 hover:text-gray-600 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="text-xs text-[#383432] space-y-2 bg-[#FAF7F2] p-3 rounded-xl border border-[#E7DFD5]">
+              <p>
+                <strong>To:</strong> {selectedConflict.properties.owner_name} (Plot No. {selectedConflict.properties.survey_plot_no || selectedConflict.properties.encroaching_parcel_id})
+              </p>
+              <p>
+                <strong>Subject:</strong> Immediate Notice regarding unauthorized setback intrusion into {selectedConflict.properties.affected_asset}.
+              </p>
+              <p className="text-red-700 font-semibold">
+                Overlap Area Detected: {selectedConflict.properties.overlap_area_sqm} m²
+              </p>
+              <p className="text-[11px] text-gray-600">
+                Under {selectedConflict.properties.statutory_clause || 'Section 67-A State Revenue Code'}, you are directed to present records before the Revenue Authority within 15 days of notice publication.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                onClick={() => setShowNoticeModal(false)}
+                className="px-3 py-1.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-700 hover:bg-gray-100"
+              >
+                Dismiss
+              </button>
+              <button
+                onClick={() => {
+                  window.print();
+                }}
+                className="px-3.5 py-1.5 rounded-xl bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition-colors flex items-center gap-1.5 shadow-sm"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print & Dispatch Notice</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* COMPREHENSIVE ROR TITLE DOSSIER & PROPERTY CARD MODAL */}
+      <RoRDossierModal
+        isOpen={showRoRDossierModal}
+        onClose={() => setShowRoRDossierModal(false)}
+        parcelId={selectedParcel.id}
+        fallbackParcel={selectedParcel}
       />
     </div>
   );

@@ -308,20 +308,20 @@ export const MapEngine: React.FC<Props> = ({
     }
   }, []);
 
-  // Update TRACGIS GeoJSON sources
+  // Update Cadastral GeoJSON sources
   const updateTracgisData = useCallback(
     (map: maplibregl.Map, side: 'left' | 'right') => {
       const prefix = `${side}-`;
 
       const parcelSource = map.getSource(`${prefix}parcels-source`) as maplibregl.GeoJSONSource;
       if (parcelSource) {
-        const fc = buildParcelFeatures(parcelsRef.current, selectedParcelId, showBoundaries && datasetMode === 'tracgis');
+        const fc = buildParcelFeatures(parcelsRef.current, selectedParcelId, showBoundaries);
         parcelSource.setData(fc as any);
       }
 
       const bufferSource = map.getSource(`${prefix}buffer-source`) as maplibregl.GeoJSONSource;
       if (bufferSource) {
-        const fc = buildBufferFeatures(parcelsRef.current, showBuffers && datasetMode === 'tracgis');
+        const fc = buildBufferFeatures(parcelsRef.current, showBuffers);
         bufferSource.setData(fc as any);
       }
 
@@ -331,19 +331,18 @@ export const MapEngine: React.FC<Props> = ({
         partitionSource.setData(fc as any);
       }
     },
-    [activePartition, showBoundaries, showBuffers, selectedParcelId, datasetMode]
+    [activePartition, showBoundaries, showBuffers, selectedParcelId]
   );
 
-  // Update SVAMITVA GeoJSON sources (Parcels, Dynamic Buffer, Encroachments)
+  // Update Road & Corridor Conflict GeoJSON sources
   const updateSvamitvaData = useCallback(
     async (map: maplibregl.Map, side: 'left' | 'right') => {
       const prefix = `${side}-`;
 
-      // 1. Parcels (Render only true cadastral parcels; road features are in independent road-source)
+      // 1. Survey Parcels Source (if any additional survey parcels loaded)
       const svamitvaSource = map.getSource(`${prefix}svamitva-source`) as maplibregl.GeoJSONSource;
       if (svamitvaSource) {
         const isVis = showBoundaries && datasetMode === 'svamitva';
-        // Filter out any parcel that is marked as Public Road so parcels and roads are strictly separate layers
         const privateOnly = svamitvaParcelsRef.current.filter(
           (p) => p.id !== 'svamitva-road-01' && p.properties?.land_type !== 'Public Road'
         );
@@ -354,7 +353,7 @@ export const MapEngine: React.FC<Props> = ({
       // 2. Independent Road Vector Source (Centerline & Boundary Corridors)
       const roadSource = map.getSource(`${prefix}road-source`) as maplibregl.GeoJSONSource;
       if (roadSource) {
-        const isRoadVis = showRoads && datasetMode === 'svamitva';
+        const isRoadVis = showRoads;
         const roadFc: GeoJSON.FeatureCollection = {
           type: 'FeatureCollection',
           features: isRoadVis ? (roadFeaturesRef.current as any) : [],
@@ -362,15 +361,14 @@ export const MapEngine: React.FC<Props> = ({
         roadSource.setData(roadFc as any);
       }
 
-      // 3. Dynamic Metric Buffer (Around selected parcel)
+      // 3. Dynamic Metric Buffer
       const bufferSource = map.getSource(`${prefix}svamitva-buffer-source`) as maplibregl.GeoJSONSource;
       if (bufferSource) {
-        if (datasetMode === 'svamitva' && selectedSvamitvaParcelId && showBuffers) {
+        if (selectedSvamitvaParcelId && showBuffers && datasetMode === 'svamitva') {
           const target = svamitvaParcelsRef.current.find(
             (p) => p.id === selectedSvamitvaParcelId || p.properties.property_id === selectedSvamitvaParcelId
           );
           if (target && target.geometry) {
-            // Attempt API fetch or client fallback
             let bufGeom = await fetchParcelBuffer(target.id, bufferDistance);
             if (!bufGeom) {
               bufGeom = generateClientGeodesicBuffer(target.geometry, bufferDistance);
@@ -389,10 +387,10 @@ export const MapEngine: React.FC<Props> = ({
         }
       }
 
-      // 4. Potential Corridor Review Zones (Amber/Red Highlight)
+      // 4. Potential Corridor Conflict Zones (Amber/Red Highlight)
       const conflictSource = map.getSource(`${prefix}svamitva-conflict-source`) as maplibregl.GeoJSONSource;
       if (conflictSource) {
-        if (datasetMode === 'svamitva' && encroachmentResults && showEncroachments) {
+        if (encroachmentResults && showEncroachments) {
           conflictSource.setData(encroachmentResults as any);
         } else {
           conflictSource.setData({ type: 'FeatureCollection', features: [] });
@@ -934,6 +932,9 @@ export const MapEngine: React.FC<Props> = ({
     const primary = mapRef.current;
 
     if (!isSplitView) {
+      if (primary && primary.getLayer('drone-layer')) {
+        primary.setPaintProperty('drone-layer', 'raster-opacity', satelliteOpacity);
+      }
       if (mapRightRef.current) {
         mapRightRef.current.remove();
         mapRightRef.current = null;
@@ -943,6 +944,11 @@ export const MapEngine: React.FC<Props> = ({
     }
 
     if (!mapRightContainerRef.current || !primary) return;
+
+    // In split view: Left pane MUST show pure Cadastral Street Map (hide drone/satellite overlay)
+    if (primary.getLayer('drone-layer')) {
+      primary.setPaintProperty('drone-layer', 'raster-opacity', 0);
+    }
 
     const mapRight = new maplibregl.Map({
       container: mapRightContainerRef.current,
@@ -1016,6 +1022,9 @@ export const MapEngine: React.FC<Props> = ({
 
       mapRight.remove();
       mapRightRef.current = null;
+      if (primary && primary.getLayer('drone-layer')) {
+        primary.setPaintProperty('drone-layer', 'raster-opacity', satelliteOpacity);
+      }
       primary.resize();
     };
   }, [isSplitView]);
@@ -1229,69 +1238,36 @@ export const MapEngine: React.FC<Props> = ({
         <div className="flex items-center justify-between font-bold text-[#23201F] border-b border-gray-100 pb-1.5">
           <span className="flex items-center gap-1.5">
             <Layers className="w-3.5 h-3.5 text-[#C85A32]" />
-            <span>
-              {datasetMode === 'svamitva'
-                ? parcelMetadata?.state === 'UPLOADED_FILE'
-                  ? `Imported Survey (${svamitvaParcels.filter(p => p.id !== 'svamitva-road-01' && p.properties?.land_type !== 'Public Road').length} Plots)`
-                  : `Survey Analysis Demo (${svamitvaParcels.filter(p => p.id !== 'svamitva-road-01' && p.properties?.land_type !== 'Public Road').length} Plots)`
-                : `TRACGIS Parcels (${parcels.length} Plots)`}
-            </span>
+            <span>Cadastral Parcels & Roads ({parcels.length} Records)</span>
           </span>
           <span className="text-[10px] text-gray-400 font-mono">
-            {datasetMode === 'svamitva'
-              ? encroachmentResults?.metadata?.analysis_crs || 'EPSG:32644'
-              : 'EPSG:4326'}
+            {encroachmentResults?.metadata?.analysis_crs || 'EPSG:4326'}
           </span>
         </div>
 
         {/* Legend Swatches */}
-        {datasetMode === 'svamitva' ? (
-          <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 text-[11px] text-[#383432]">
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-xs bg-[#0284C7] border border-black/20 shrink-0" />
-              <span>
-                {parcelMetadata?.state === 'UPLOADED_FILE'
-                  ? 'Imported Parcels'
-                  : 'Demo Parcels'}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-xs bg-[#475569] border border-black/20 shrink-0" />
-              <span>
-                {roadMetadata?.state === 'IMPORTED_ROAD' || roadMetadata?.state === 'PUBLIC_VECTOR_ROAD'
-                  ? 'Vector Road Corridor'
-                  : 'Demo Road Geometry'}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-xs bg-[#F59E0B] border border-dashed border-amber-800 shrink-0" />
-              <span>Corridor ({bufferDistance}m)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-xs bg-[#DC2626] border border-black/20 shrink-0" />
-              <span>Potential Review Area</span>
-            </div>
+        <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 text-[11px] text-[#383432]">
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-xs bg-[#276728] border border-black/20 shrink-0" />
+            <span>Clean Title (Grade A)</span>
           </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 text-[11px] text-[#383432]">
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-xs bg-[#276728] border border-black/20 shrink-0" />
-              <span>Clean Title (Grade A)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-xs bg-[#D97706] border border-black/20 shrink-0" />
-              <span>Survey Discrepancy</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-xs bg-[#DC2626] border border-black/20 shrink-0" />
-              <span>Critical Encroachment</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-xs bg-[#0284C7] border border-black/20 shrink-0" />
-              <span>Notified FTL / Buffer</span>
-            </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-xs bg-[#D97706] border border-black/20 shrink-0" />
+            <span>Survey Discrepancy</span>
           </div>
-        )}
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-xs bg-[#DC2626] border border-black/20 shrink-0" />
+            <span>Conflict / Encroachment</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-xs bg-[#475569] border border-black/20 shrink-0" />
+            <span>
+              {roadMetadata?.state === 'IMPORTED_ROAD' || roadMetadata?.state === 'PUBLIC_VECTOR_ROAD'
+                ? 'Vector Road Corridor'
+                : 'Road Corridor'}
+            </span>
+          </div>
+        </div>
 
         {/* Layer Checkboxes */}
         <div className="pt-1.5 border-t border-gray-100 flex items-center justify-between text-[11px] text-[#6B6360] flex-wrap gap-1">
@@ -1304,17 +1280,17 @@ export const MapEngine: React.FC<Props> = ({
             />
             <span className="font-medium text-[#23201F]">Parcels</span>
           </label>
-          {datasetMode === 'svamitva' && (
-            <label className="flex items-center gap-1 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showRoads}
-                onChange={(e) => setShowRoads(e.target.checked)}
-                className="accent-slate-700"
-              />
-              <span className="font-medium text-slate-800">Roads</span>
-            </label>
-          )}
+
+          <label className="flex items-center gap-1 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showRoads}
+              onChange={(e) => setShowRoads(e.target.checked)}
+              className="accent-slate-700"
+            />
+            <span className="font-medium text-slate-800">Roads</span>
+          </label>
+
           <label className="flex items-center gap-1 cursor-pointer">
             <input
               type="checkbox"
@@ -1324,17 +1300,16 @@ export const MapEngine: React.FC<Props> = ({
             />
             <span className="font-medium text-[#23201F]">Buffers</span>
           </label>
-          {datasetMode === 'svamitva' && (
-            <label className="flex items-center gap-1 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showEncroachments}
-                onChange={(e) => setShowEncroachments(e.target.checked)}
-                className="accent-red-600"
-              />
-              <span className="font-medium text-red-700">Review</span>
-            </label>
-          )}
+
+          <label className="flex items-center gap-1 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showEncroachments}
+              onChange={(e) => setShowEncroachments(e.target.checked)}
+              className="accent-red-600"
+            />
+            <span className="font-medium text-red-700">Conflicts</span>
+          </label>
         </div>
       </div>
     </div>

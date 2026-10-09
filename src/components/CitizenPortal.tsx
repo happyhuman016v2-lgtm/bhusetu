@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Parcel, PartitionResult } from '../types';
 import { NearestOfficeCard } from './NearestOfficeCard';
 import { LandDivisionAssistant } from './LandDivisionAssistant';
+import { RoRDossierModal } from './RoRDossierModal';
+import { computeChauhaddiNeighbors } from '../services/gisEngine';
 import {
   Search,
   CheckCircle,
@@ -15,6 +17,10 @@ import {
   Printer,
   ChevronRight,
   Info,
+  Compass,
+  Users,
+  FileText,
+  Sparkles,
 } from 'lucide-react';
 
 interface Props {
@@ -36,14 +42,23 @@ export const CitizenPortal: React.FC<Props> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedULPIN, setCopiedULPIN] = useState(false);
-  const [showPropertyCardModal, setShowPropertyCardModal] = useState(false);
+  const [showRoRDossierModal, setShowRoRDossierModal] = useState(false);
   const [showCitizenPartition, setShowCitizenPartition] = useState(false);
 
   // Status filter state
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'CLEAN' | 'WARNING' | 'CRITICAL'>('ALL');
 
-  // Search and status filter
-  const filteredParcels = parcels.filter((p) => {
+  // Search and status filter with strict de-duplication
+  const uniqueParcels = React.useMemo(() => {
+    const seen = new Set<string>();
+    return parcels.filter((p) => {
+      if (seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
+  }, [parcels]);
+
+  const filteredParcels = uniqueParcels.filter((p) => {
     const matchesStatus = statusFilter === 'ALL' || p.status === statusFilter;
     const q = searchQuery.toLowerCase().trim();
     const matchesQuery =
@@ -56,6 +71,22 @@ export const CitizenPortal: React.FC<Props> = ({
       (p.coOwners && p.coOwners.some((co) => co.name.toLowerCase().includes(q)));
     return matchesStatus && matchesQuery;
   });
+
+  // Dynamically compute authentic 4-Point Boundary Cadastral Neighbors (Chauhaddi) for this parcel
+  const dynamicChauhaddi = React.useMemo(() => {
+    return computeChauhaddiNeighbors(selectedParcel, parcels);
+  }, [selectedParcel, parcels]);
+
+  // Genuine Co-owners (filter out synthetic placeholder co-owners like 'Co-owner 30')
+  const validCoOwners = React.useMemo(() => {
+    if (!selectedParcel.coOwners) return [];
+    return selectedParcel.coOwners.filter(
+      (co) =>
+        co.name &&
+        !/^Co-owner \d+$/i.test(co.name.trim()) &&
+        !co.name.toLowerCase().includes('placeholder')
+    );
+  }, [selectedParcel]);
 
   const handleCopyULPIN = () => {
     navigator.clipboard.writeText(selectedParcel.ulpin);
@@ -204,11 +235,12 @@ export const CitizenPortal: React.FC<Props> = ({
           </div>
 
           <button
-            onClick={() => setShowPropertyCardModal(true)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#E7DFD5] text-[#C85A32] hover:bg-[#C85A32]/10 transition-colors text-xs font-semibold shrink-0"
+            onClick={() => setShowRoRDossierModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#23201F] text-white hover:bg-black transition-all text-xs font-bold shrink-0 shadow-xs border border-black/20"
+            title="Open comprehensive Record of Rights (RoR) Title Dossier & Official Property Card"
           >
-            <FileBadge className="w-4 h-4" />
-            <span>Property Card</span>
+            <FileBadge className="w-4 h-4 text-[#C85A32]" />
+            <span>Title Dossier & Card</span>
           </button>
         </div>
 
@@ -260,6 +292,100 @@ export const CitizenPortal: React.FC<Props> = ({
           </div>
         </div>
 
+        {/* Chauhaddi (4-Point Boundary Cadastral Neighbors - Dynamically Computed) */}
+        <div className="bg-[#FAF7F2] p-3 rounded-xl border border-[#E7DFD5] space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-[#23201F] flex items-center gap-1.5">
+              <Compass className="w-3.5 h-3.5 text-[#C85A32]" />
+              <span>Chauhaddi (4-Point Boundary Neighbors)</span>
+            </span>
+            <span className="text-[10px] bg-white border border-[#E7DFD5] text-[#6B6360] px-2 py-0.5 rounded-full font-semibold">
+              Legal Cadastral Abuttal
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-[11px]">
+            <div className="bg-white p-2 rounded-lg border border-[#E7DFD5]/80">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-[#C85A32]">North (उत्तर)</span>
+                <span className="text-[9px] bg-blue-50 text-blue-700 px-1.5 py-0.2 rounded font-bold">
+                  {dynamicChauhaddi.north.tag}
+                </span>
+              </div>
+              <p className="font-semibold text-[#23201F] mt-0.5 truncate">{dynamicChauhaddi.north.label}</p>
+              <p className="text-[10px] text-[#6B6360] truncate">{dynamicChauhaddi.north.subtext}</p>
+            </div>
+
+            <div className="bg-white p-2 rounded-lg border border-[#E7DFD5]/80">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-amber-700">South (दक्षिण)</span>
+                <span className="text-[9px] bg-amber-50 text-amber-700 px-1.5 py-0.2 rounded font-bold">
+                  {dynamicChauhaddi.south.tag}
+                </span>
+              </div>
+              <p className="font-semibold text-[#23201F] mt-0.5 truncate">{dynamicChauhaddi.south.label}</p>
+              <p className="text-[10px] text-[#6B6360] truncate">{dynamicChauhaddi.south.subtext}</p>
+            </div>
+
+            <div className="bg-white p-2 rounded-lg border border-[#E7DFD5]/80">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-[#276728]">East (पूर्व)</span>
+                <span className="text-[9px] bg-emerald-50 text-emerald-700 px-1.5 py-0.2 rounded font-bold">
+                  {dynamicChauhaddi.east.tag}
+                </span>
+              </div>
+              <p className="font-semibold text-[#23201F] mt-0.5 truncate">{dynamicChauhaddi.east.label}</p>
+              <p className="text-[10px] text-[#6B6360] truncate">{dynamicChauhaddi.east.subtext}</p>
+            </div>
+
+            <div className="bg-white p-2 rounded-lg border border-[#E7DFD5]/80">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-purple-700">West (पश्चिम)</span>
+                <span className="text-[9px] bg-purple-50 text-purple-700 px-1.5 py-0.2 rounded font-bold">
+                  {dynamicChauhaddi.west.tag}
+                </span>
+              </div>
+              <p className="font-semibold text-[#23201F] mt-0.5 truncate">{dynamicChauhaddi.west.label}</p>
+              <p className="text-[10px] text-[#6B6360] truncate">{dynamicChauhaddi.west.subtext}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Pattadar Co-Owners & Title Equity (Rendered ONLY when multiple legitimate co-owners exist) */}
+        {validCoOwners.length > 1 && (
+          <div className="bg-[#FAF7F2] p-3 rounded-xl border border-[#E7DFD5] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-[#23201F] flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-[#C85A32]" />
+                <span>Pattadar Co-Owners & Equity Split</span>
+              </span>
+              <span className="text-[10px] text-[#6B6360]">
+                Total Holding: <strong>{selectedParcel.area.gisSqm} m²</strong> (100% Equity)
+              </span>
+            </div>
+
+            <div className="space-y-1.5">
+              {validCoOwners.map((co, idx) => {
+                const pct = Math.round((co.shareFraction || (1 / validCoOwners.length)) * 100);
+                return (
+                  <div key={idx} className="bg-white p-2 rounded-lg border border-[#E7DFD5] flex items-center justify-between text-xs">
+                    <div>
+                      <span className="font-bold text-[#23201F]">{co.name}</span>
+                      <span className="text-[10px] text-[#6B6360] ml-2">({co.relationship || 'Co-Owner'})</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[#276728]">{pct}%</span>
+                      <span className="text-[10px] text-[#6B6360]">
+                        ({Math.round((selectedParcel.area.gisSqm * pct) / 100)} m²)
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Violations / Encroachments Alert (if any) */}
         {selectedParcel.violations.length > 0 && (
           <div className="bg-[#B91C1C]/10 border border-[#B91C1C]/30 rounded-xl p-3 space-y-2">
@@ -296,17 +422,21 @@ export const CitizenPortal: React.FC<Props> = ({
         />
       </div>
 
-      {/* 🌟 LAND PARTITION & FAIR DIVISION ASSISTANT (Shown on Discrepancy or when requested) */}
-      {selectedParcel.status !== 'CLEAN' || selectedParcel.violations.length > 0 || showCitizenPartition ? (
-        <div className="space-y-2">
-          {selectedParcel.status !== 'CLEAN' && (
-            <div className="bg-[#D97706]/10 border border-[#D97706]/30 rounded-lg p-2.5 flex items-center justify-between text-xs text-[#D97706] font-semibold">
-              <span className="flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                <span>Boundary / Title Discrepancy Detected — Land Division Assistant Activated</span>
-              </span>
-            </div>
-          )}
+      {/* 🌟 LAND PARTITION & FAIR DIVISION ASSISTANT (Only rendered when user explicitly clicks the button) */}
+      {showCitizenPartition ? (
+        <div className="space-y-2 border border-[#C85A32]/30 bg-[#FAF7F2] p-3 rounded-xl">
+          <div className="flex items-center justify-between pb-2 border-b border-[#E7DFD5]">
+            <span className="text-xs font-bold text-[#23201F] flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-[#C85A32]" />
+              <span>Interactive Land Partition & Fair Co-Owner Division</span>
+            </span>
+            <button
+              onClick={() => setShowCitizenPartition(false)}
+              className="text-xs text-[#6B6360] hover:text-[#B91C1C] font-semibold px-2 py-0.5 rounded border border-[#E7DFD5] bg-white hover:bg-red-50"
+            >
+              ✕ Close Division Assistant
+            </button>
+          </div>
           <LandDivisionAssistant
             parcel={selectedParcel}
             activePartition={activePartition}
@@ -317,7 +447,7 @@ export const CitizenPortal: React.FC<Props> = ({
       ) : (
         <div className="bg-[#FAF7F2] border border-[#E7DFD5] rounded-xl p-3 text-center">
           <p className="text-xs text-[#6B6360] mb-2">
-            This parcel is verified and clean. Dividing this plot among family co-heirs or partners?
+            Dividing this plot among family co-heirs or partners? Use the algorithmic fair division assistant.
           </p>
           <button
             onClick={() => setShowCitizenPartition(true)}
@@ -328,70 +458,13 @@ export const CitizenPortal: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Property Card Modal */}
-      {showPropertyCardModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden border border-[#E7DFD5]">
-            <div className="bg-[#C85A32] text-white p-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileBadge className="w-5 h-5 text-white" />
-                <div>
-                  <h3 className="font-bold text-sm">Official Digital Bhu-Aadhaar Property Card</h3>
-                  <p className="text-[10px] text-white/80">Government of India • Survey of India • DoLR</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowPropertyCardModal(false)}
-                className="text-white/80 hover:text-white text-lg px-2"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="p-4 space-y-3 text-xs text-[#23201F]">
-              <div className="flex justify-between items-center border-b border-gray-100 pb-2">
-                <span className="text-[#6B6360]">Bhu-Aadhaar ULPIN:</span>
-                <span className="font-mono font-bold">{selectedParcel.ulpin}</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-gray-100 pb-2">
-                <span className="text-[#6B6360]">Cadastral Survey No:</span>
-                <span className="font-bold">{selectedParcel.surveyNumber}</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-gray-100 pb-2">
-                <span className="text-[#6B6360]">Deeded Landowner:</span>
-                <span className="font-bold">{selectedParcel.owner.name}</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-gray-100 pb-2">
-                <span className="text-[#6B6360]">Title RoR Area:</span>
-                <span className="font-bold">{selectedParcel.area.rorSqm} m² ({selectedParcel.area.regionalValue})</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-gray-100 pb-2">
-                <span className="text-[#6B6360]">Public Trust Score:</span>
-                <span className="font-bold text-[#276728]">{selectedParcel.trustScore}/100 (Grade {selectedParcel.trustGrade})</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-gray-100 pb-2">
-                <span className="text-[#6B6360]">Competent Land Office:</span>
-                <span className="font-bold">{selectedParcel.nearestOffice.officeName}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[#6B6360]">Designated Officer:</span>
-                <span className="font-bold">{selectedParcel.nearestOffice.officerName} ({selectedParcel.nearestOffice.phone})</span>
-              </div>
-            </div>
-
-            <div className="p-3 bg-[#FAF7F2] border-t border-[#E7DFD5] flex items-center justify-between">
-              <span className="text-[10px] text-[#6B6360]">Cryptographically verified by BhuSetu Engine</span>
-              <button
-                onClick={() => window.print()}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#23201F] text-white text-xs font-semibold hover:bg-black"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Print Card</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Official RoR Land Title Dossier & Digital Property Card Modal */}
+      <RoRDossierModal
+        isOpen={showRoRDossierModal}
+        onClose={() => setShowRoRDossierModal(false)}
+        parcelId={selectedParcel.id}
+        fallbackParcel={selectedParcel}
+      />
     </div>
   );
 };
