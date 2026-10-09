@@ -106,6 +106,53 @@ interface Props {
   onParcelsUpdated?: () => void;
 }
 
+/**
+ * Helper to dynamically extract or compute realistic cadastral discrepancy reason for a parcel
+ */
+export const computeParcelDiscrepancyReason = (parcel?: Parcel | null): string => {
+  if (!parcel) {
+    return 'Cadastral title boundary verification and aerial drone resurvey required.';
+  }
+
+  // 1. Check for specific critical/warning violations
+  if (parcel.violations && parcel.violations.length > 0) {
+    const violation = parcel.violations[0];
+    if (violation.type === 'WATERBODY_BUFFER_ENCROACHMENT') {
+      const area = violation.encroachmentAreaSqm ? `${violation.encroachmentAreaSqm.toFixed(1)}m² ` : '';
+      return `Critical Lake/Waterbody Buffer Encroachment: Actual drone boundary intrudes ${area}into notified preservation catchment (FTL).`;
+    }
+    if (violation.type === 'ROAD_SETBACK_ENCROACHMENT') {
+      const area = violation.encroachmentAreaSqm ? `${violation.encroachmentAreaSqm.toFixed(1)}m² ` : '';
+      return `Statutory Road Setback Violation: High-precision UAV survey flags ${area}encroachment beyond legal Right-of-Way setback.`;
+    }
+    if (violation.type === 'AREA_RECORD_MISMATCH') {
+      const delta = parcel.area ? (parcel.area.gisSqm - parcel.area.rorSqm).toFixed(1) : 'variance';
+      return `Cadastral RoR vs Geodesic Area Variance: Registered RoR title differs from satellite geodesic boundary by ${delta} m².`;
+    }
+    if (violation.description) {
+      return `${violation.title}: ${violation.description}`;
+    }
+  }
+
+  // 2. Check for buffer zone conflicts
+  if (parcel.bufferZone) {
+    return `Statutory Buffer Conflict: Plot ${parcel.surveyNumber} intersects ${parcel.bufferZone.name} (${parcel.bufferZone.type}). Ground UAV redemarcation ordered.`;
+  }
+
+  // 3. Check for RoR title vs Drone GIS area delta
+  if (parcel.area?.rorSqm && parcel.area?.gisSqm) {
+    const delta = parcel.area.gisSqm - parcel.area.rorSqm;
+    const deltaPct = ((delta / parcel.area.rorSqm) * 100);
+    if (Math.abs(deltaPct) > 1.0) {
+      const sign = delta > 0 ? '+' : '';
+      return `Cadastral Area Discrepancy: RoR recorded ${parcel.area.rorSqm.toLocaleString()} m² vs Drone Surveyed ${parcel.area.gisSqm.toLocaleString()} m² (${sign}${delta.toFixed(1)} m², ${sign}${deltaPct.toFixed(1)}%). Boundary reconciliation ordered.`;
+    }
+  }
+
+  // 4. Default specific to parcel
+  return `Cadastral Boundary Audit: Plot ${parcel.surveyNumber} in ${parcel.village} (${parcel.ulpin}) flagged for statutory UAV ground verification and title concordance under Section 67-A.`;
+};
+
 export const OfficerPortal: React.FC<Props> = ({
   parcels,
   selectedParcel,
@@ -202,8 +249,8 @@ export const OfficerPortal: React.FC<Props> = ({
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [orderParcelId, setOrderParcelId] = useState(selectedParcel.id);
   const [orderULPIN, setOrderULPIN] = useState(selectedParcel.ulpin || 'UP1428SNMPGN101');
-  const [orderReason, setOrderReason] = useState(
-    'Discrepancy detected: Actual drone survey polygon reveals 42.5m² encroachment beyond legal registry setback.'
+  const [orderReason, setOrderReason] = useState<string>(() =>
+    computeParcelDiscrepancyReason(selectedParcel)
   );
   const [orderResolution, setOrderResolution] = useState('< 3cm GSD UAV Photogrammetry');
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
@@ -214,6 +261,7 @@ export const OfficerPortal: React.FC<Props> = ({
     if (selectedParcel) {
       setOrderParcelId(selectedParcel.id);
       setOrderULPIN(selectedParcel.ulpin || `UP1428SNMPGN${selectedParcel.id.slice(-3).toUpperCase()}`);
+      setOrderReason(computeParcelDiscrepancyReason(selectedParcel));
     }
   }, [selectedParcel]);
 
@@ -860,7 +908,12 @@ export const OfficerPortal: React.FC<Props> = ({
                 <span>Signed QR Report</span>
               </button>
               <button
-                onClick={() => setShowOrderModal(true)}
+                onClick={() => {
+                  setOrderParcelId(selectedParcel.id);
+                  setOrderULPIN(selectedParcel.ulpin || `UP1428SNMPGN${selectedParcel.id.slice(-3).toUpperCase()}`);
+                  setOrderReason(computeParcelDiscrepancyReason(selectedParcel));
+                  setShowOrderModal(true);
+                }}
                 className="px-3 py-1.5 bg-[#C85A32] hover:bg-[#a64420] text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs"
               >
                 <Stamp className="w-3.5 h-3.5" />
@@ -915,6 +968,7 @@ export const OfficerPortal: React.FC<Props> = ({
                         onSelectParcel(parcel.id);
                         setOrderParcelId(parcel.id);
                         setOrderULPIN(parcel.ulpin);
+                        setOrderReason(computeParcelDiscrepancyReason(parcel));
                         setShowOrderModal(true);
                       }}
                       className="px-3 py-1.5 rounded-lg bg-[#23201F] text-white text-xs font-bold hover:bg-black transition-colors flex items-center gap-1.5 shadow-xs"
@@ -1415,11 +1469,18 @@ export const OfficerPortal: React.FC<Props> = ({
                     <span className="w-6 h-6 rounded-lg bg-[#23201F] text-white font-mono font-bold text-[11px] flex items-center justify-center">
                       #{block.index}
                     </span>
-                    <span className="font-bold text-[#23201F]">
-                      {block.payload.type === 'GENESIS_ANCHOR'
-                        ? 'Genesis Root Anchor'
-                        : `Drone Resurvey Order (${block.payload.ulpin || block.ulpin})`}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[#23201F]">
+                        {block.payload.type === 'GENESIS_ANCHOR'
+                          ? 'Genesis Root Anchor'
+                          : `Drone Resurvey Order • ${block.payload.parcel_id ? `Plot ${block.payload.parcel_id.replace('parcel-', '#')}` : 'Cadastral Parcel'}`}
+                      </span>
+                      {block.payload.ulpin && (
+                        <span className="font-mono text-[10px] bg-[#FAF7F2] text-[#383432] px-2 py-0.5 rounded border border-[#E7DFD5]">
+                          {block.payload.ulpin}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -1428,15 +1489,28 @@ export const OfficerPortal: React.FC<Props> = ({
                   </span>
                 </div>
 
-                <p className="text-xs text-[#383432]">
-                  {block.payload.discrepancy_reason || block.payload.memo}
-                </p>
+                {/* Discrepancy Description Box */}
+                <div className="p-3 rounded-xl bg-[#FAF7F2] border border-[#E7DFD5] space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900">
+                      {block.payload.type === 'GENESIS_ANCHOR' ? 'Statutory Root Mandate' : 'Statutory Discrepancy Finding'}
+                    </span>
+                    {block.payload.target_accuracy && (
+                      <span className="text-[10px] font-medium text-gray-600 bg-white px-2 py-0.5 rounded border border-gray-200">
+                        {block.payload.target_accuracy}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-[#23201F] font-medium leading-relaxed">
+                    {block.payload.discrepancy_reason || block.payload.memo}
+                  </p>
+                </div>
 
-                <div className="grid grid-cols-2 gap-2 text-[10px] text-gray-500 bg-[#FAF7F2] p-2.5 rounded-xl border border-[#E7DFD5] font-mono">
+                <div className="grid grid-cols-2 gap-2 text-[10px] text-gray-500 bg-gray-50/70 p-2.5 rounded-xl border border-gray-200/60 font-mono">
                   <div>
-                    <span className="block text-gray-400">Issuing Officer Badge:</span>
+                    <span className="block text-gray-400">Issuing Officer:</span>
                     <span className="font-bold text-[#23201F]">
-                      {block.payload.officer_badge_id || 'SYSTEM_GENESIS'}
+                      {block.payload.officer_name || block.payload.officer_badge_id || 'Survey of India / DoLR'}
                     </span>
                   </div>
                   <div>
@@ -1862,7 +1936,10 @@ export const OfficerPortal: React.FC<Props> = ({
                 </div>
 
                 <div>
-                  <label className="block font-bold text-gray-700 mb-1">Discrepancy / Resurvey Reason</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-bold text-gray-700">Discrepancy / Resurvey Reason</label>
+                    <span className="text-[10px] text-gray-400">Customizable statutory finding</span>
+                  </div>
                   <textarea
                     rows={3}
                     value={orderReason}
@@ -1870,6 +1947,43 @@ export const OfficerPortal: React.FC<Props> = ({
                     className="w-full px-3 py-2 bg-[#FAF7F2] border border-[#E7DFD5] rounded-xl text-[#23201F]"
                     required
                   />
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setOrderReason(`Critical Lake/Waterbody Buffer Encroachment: Actual drone survey polygon reveals 38.5m² intrusion into notified waterbody preservation catchment line.`)}
+                      className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 text-[10px] font-semibold transition-colors border border-blue-200/60"
+                    >
+                      + Waterbody FTL
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOrderReason(`Statutory Road Setback Violation: High-precision UAV survey flags 18.2m² boundary encroachment beyond legal Right-of-Way setback.`)}
+                      className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 hover:bg-amber-100 text-[10px] font-semibold transition-colors border border-amber-200/60"
+                    >
+                      + Road Setback
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOrderReason(`Cadastral RoR vs Geodesic Area Variance: Registered RoR title area (${selectedParcel.area?.rorSqm?.toLocaleString() || '1,200'} m²) differs from drone survey area by ${(Math.abs((selectedParcel.area?.gisSqm || 1245) - (selectedParcel.area?.rorSqm || 1200))).toFixed(1)} m².`)}
+                      className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 hover:bg-purple-100 text-[10px] font-semibold transition-colors border border-purple-200/60"
+                    >
+                      + Area Variance
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOrderReason(`Ground Boundary Dislocation Detected: DGPS field demarcation reveals northern boundary marker displacement of 1.45m across cadastral parcel line.`)}
+                      className="px-2 py-0.5 rounded-md bg-red-50 text-red-700 hover:bg-red-100 text-[10px] font-semibold transition-colors border border-red-200/60"
+                    >
+                      + Boundary Shift
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOrderReason(computeParcelDiscrepancyReason(selectedParcel))}
+                      className="px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 text-[10px] font-semibold transition-colors border border-gray-300"
+                    >
+                      ↺ Reset to Plot
+                    </button>
+                  </div>
                 </div>
 
                 <div>
